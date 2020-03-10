@@ -1,66 +1,81 @@
 import Vue from 'vue'
-import VueRouter from 'vue-router'
+import Router from 'vue-router'
 import Home from '../views/Home.vue'
-import Skins from '../views/Skins.vue'
 import Leaderboard from '../views/Leaderboard.vue'
 import Login from '../views/Login.vue'
 import Signup from '../views/Signup.vue'
-import Multi from '../views/Multi.vue'
+import Profile from '../views/Profile.vue'
 
-Vue.use(VueRouter)
+Vue.use(Router)
 
-const routes = [
-  {
-    path: '/home',
-    name: 'home',
-    component: Home
-  },
-  {
-    path: '/skins',
-    name: 'skins',
-    component: Skins
-  },
-  {
-    path: '/leaderboard',
-    name: 'leaderboard',
-    component: Leaderboard
-  },
-  {
-    path: '/login',
-    name: 'login',
-    component: Login
-  },
-  {
-    path: '/signup',
-    name: 'signup',
-    component: Signup
-  },
-  {
-    path: '/multi',
-    name: 'multi',
-    component: Multi
-  }
-
-]
-
-const router = new VueRouter({
+const router = new Router({
   mode: 'history',
-  base: process.env.BASE_URL,
-  routes
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: Home,
+      meta: {
+        requiresAuth: true
+      }
+    },
+    {
+      path: '/Profile',
+      name: 'profile',
+      component: Profile
+    },
+    {
+      path: '/leaderboard',
+      name: 'leaderboard',
+      component: Leaderboard
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: Login
+    },
+    {
+      path: '/signup',
+      name: 'signup',
+      component: Signup
+    },
+  ]
 })
 
-/*function login(){
-  let myCookie = this.getCookie("createUser");
-          if (myCookie == null) {
-              // do cookie doesn't exist stuff;
-              return true
-              
-          }
-          else {
-              // do cookie exists stuff
-              return false
-          }
-}*/
+
+router.beforeEach((to, from, next) => {
+  if(to.matched.some(rec => rec.meta.requiresAuth)){
+    let cookie = getCookie("vueCheck");
+    if(cookie){
+      next()
+    }else {
+      next({ name: 'login' })
+    }
+  }else{
+    next()
+  }
+})
+
+function getCookie(name) {
+  let dc = document.cookie;
+  let prefix = name + "=";
+  let begin = dc.indexOf("; " + prefix);
+  if (begin == -1) {
+      begin = dc.indexOf(prefix);
+      if (begin != 0) return null;
+  }
+  else
+  {
+      begin += 2;
+      var end = document.cookie.indexOf(";", begin);
+      if (end == -1) {
+      end = dc.length;
+      }
+  }
+  // because unescape has been deprecated, replaced with decodeURI
+  //return unescape(dc.substring(begin + prefix.length, end));
+  return decodeURI(dc.substring(begin + prefix.length, end));
+}
 
 
 export default router

@@ -1,20 +1,18 @@
 <template>
-  <v-container class="grey lighten-5 justify-center" fill-height>
+  <v-container class="black lighten-5 pa-0" fluid fill-height>
     <Navbar />
-
-  
-    <v-flex md5 >
-
     <Mainmenu />
-  </v-flex>
-  <v-flex md5 >
-    <v-card class="mx-auto transparent justify-center"  height="350">
+ 
+  <v-layout row wrap justify-center align-center>
+  <v-flex md7 lg6>
+    
+    <v-card class="mx-auto transparent text-center"  height="350">
         <v-card-title disabled class="headline white--text justify-center align-center">Profile</v-card-title>
         <v-card-text class="white--text text-center body-1"><router-link to="/login"> Sign in</router-link> | <router-link to="/signup"> Sign up</router-link> </v-card-text>
     <v-card-text>
        <v-form class="px-3 text-center" @submit.prevent="login">
-           <v-text-field class="theme--dark" label="email" :rules="emailRules" v-model="email"></v-text-field>
-           <p v-if="useremail" class="red--text">{{useremail}}</p>
+           <v-text-field class="theme--dark" label="email" v-model="email"></v-text-field>
+           <p v-if="emailError" class="red--text">{{emailError}}</p>
             <v-btn @click="login" >Send login code</v-btn>
         </v-form> 
     </v-card-text>
@@ -27,9 +25,9 @@
                 <v-card-title class="lighten-2" primary-title><h2> Confirm your identity</h2></v-card-title>
                 <v-card-text>We have sent an email to you, might take a minute</v-card-text>
                 <v-card-text>
-                  <v-form class="px-3" >
+                  <v-form class="px-3">
                     <v-text-field class="theme--dark" placeholder="XXXXXX" v-model="code"></v-text-field>
-                    <p v-if="error" class="red--text">{{error}}</p>
+                    <p v-if="error" class="red--text">error: {{error}}</p>
                     <v-btn color="white" class="black--text" @click="confirmIdentity">Submit</v-btn>
                   </v-form> 
                 </v-card-text>
@@ -43,25 +41,19 @@
     </v-card>
     
   </v-flex>
+  </v-layout>
   
   </v-container>
 </template>
 
 <script>
 import Navbar from '@/components/Navbar.vue'
-import UserService from '../UserService.js'
-import ConfService from '../ConfService.js'
+import {mapActions} from "vuex"
 import Mainmenu from '@/components/Mainmenu.vue'
   export default {
     components: {Mainmenu, Navbar},
     name: 'home',
     data: () => ({
-      links: [
-        {route: '/multi', text: 'Multiplayer'},
-        {route: '/single', text: 'Singleplayer'},
-        {route: '/', text: 'Profile'},
-        {route: '/leaderboard', text: 'Leaderboard'},
-      ],
       emailRules: [
         v => !!v || 'E-mail is required',
         v => /.+@.+\..+/.test(v) || 'E-mail must be valid',
@@ -71,44 +63,36 @@ import Mainmenu from '@/components/Mainmenu.vue'
       error: "",
       code: "",
       useremail: "",
+      emailError: ""
     }),
     methods:{
+      ...mapActions(["loginUser", "confLogin", "fetchUserdata"]),
       async login(){
-        this.error = "";
-        UserService.loginUser(this.email)
-        console.log(this.emailRules)
-        /*let myCookie = this.getCookie("createUser");
-          if (myCookie == null) {
-              // do cookie doesn't exist stuff;
-              this.error1 = "invalid email"
-              
-          }
-          else {
-              // do cookie exists stuff
-              this.dialog = true;
-          }*/
-          let test = /.+@.+\..+/.test(this.email)
-            console.log(test)
-            if(test){
+        
+
+            await this.loginUser(this.email);
+
+            let myCookie = this.getCookie("createUser");
+            if(myCookie){
               this.dialog = true
+              this.emailError = "";
+            }else{
+              this.emailError = "something went wrong.." 
             }
       },
       async confirmIdentity(){
 
-          let res = await ConfService.confirmCode(this.code)
+          await this.confLogin(this.code)
 
           let myCookie = this.getCookie("vueCheck");
-          console.log(myCookie)
           if(myCookie){
-              this.$router.push({ path: '/home' })
+              this.$router.push({ path: '/' })
+              this.fetchUserdata()
+
           }else{
               this.error = "invalid code"
           }
           console.log(this.error)
-          
-          if(res){
-              this.useremail = res.email
-          }
       },
 
       getCookie(name) {
@@ -122,14 +106,14 @@ import Mainmenu from '@/components/Mainmenu.vue'
     else
     {
         begin += 2;
-        let end = document.cookie.indexOf(";", begin);
+        var end = document.cookie.indexOf(";", begin);
         if (end == -1) {
         end = dc.length;
         }
     }
     // because unescape has been deprecated, replaced with decodeURI
     //return unescape(dc.substring(begin + prefix.length, end));
-    return decodeURI(dc.substring(begin + prefix.length, this.end));
+    return decodeURI(dc.substring(begin + prefix.length, end));
 },
     }
   }

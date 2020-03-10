@@ -1,12 +1,12 @@
 import Vuex from 'vuex';
 import Vue from 'vue';
-import userdata from './modules/userdata'
+import userservice from './modules/userservice'
 
 Vue.use(Vuex);
 
 
 export default new Vuex.Store({
     modules: {
-        userdata
+        userservice
     }
 })

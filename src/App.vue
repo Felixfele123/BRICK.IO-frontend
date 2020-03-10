@@ -1,7 +1,7 @@
 
 <template>
-  <v-app>
-      <HomeBackground v-if="$route.name !== 'multi'" />
+  <v-app class="black">
+    <Multi v-if="this.$route.path === '/'"/>
     <v-content>
       <router-view></router-view>
     </v-content>
@@ -9,13 +9,17 @@
 </template>
 
 <script>
-import HomeBackground from '@/components/HomeBackground'
+import Multi from '@/components/Multi'
 export default {
-  components: {HomeBackground},
+  components: {Multi},
   name: 'App',
   data: () => ({
     //
   }),
 };
 </script>
-
+<style>
+main{
+  background-color: black !important;
+}
+</style>

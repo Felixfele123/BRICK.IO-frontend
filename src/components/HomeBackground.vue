@@ -1,7 +1,15 @@
 
 <template>
-    <canvas id="gameCanvas" >
+  <v-container class="justify-center pa-0"  fluid fill-height>
+      <v-card @click="play()" class="transparent justify-center align-center text-center">
+            <v-card-title class="white--text display-4 level">Level 1</v-card-title>
+        <span class="blink">Click to play</span>
+
+      </v-card>
+    <canvas id="homeCanvas"  @resize="resize">
     </canvas>
+	</v-container>
+
 </template>
 
 <script>
@@ -21,16 +29,21 @@
 
         canvas: null, 
         canvasContext: null
-    }),
+	}),
+	created() {
+	window.addEventListener("resize", this.resize);
+	},
+
     mounted(){
 
-    this.canvas = document.getElementById('gameCanvas');
+    this.canvas = document.getElementById('homeCanvas');
     this.canvasContext = this.canvas.getContext('2d');
     
     this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+	this.canvas.height = window.innerHeight;
+	
 
-    var framesPerSecond = 100;
+    let framesPerSecond = 100;
 	setInterval(this.updateAll, 1000/framesPerSecond);
 
     },
@@ -46,6 +59,12 @@ updateMousePos() {
 	}else{
 		this.paddleX = this.ballX - this.PADDLE_WIDTH/1.5;
 	}
+},
+
+resize() {
+    this.canvas.width = window.innerWidth;
+	this.canvas.height = window.innerHeight;
+
 },
 
 updateAll() {
@@ -66,6 +85,18 @@ moveAll() {
 	if(this.ballY < 0) { // top
 		this.ballSpeedY *= -1;
 	}
+
+	let ballBrickCol = Math.floor(this.ballX / this.BRICK_W);
+	let ballBrickRow = Math.floor(this.ballY / this.BRICK_H);
+	let brickIndexUnderBall = this.rowColToArrayIndex(ballBrickCol, ballBrickRow);
+	if(ballBrickCol >= 0 && ballBrickCol < this.BRICK_COLS &&
+		ballBrickRow >= 0 && ballBrickRow < this.BRICK_ROWS) {
+
+		if(this.brickGrid[brickIndexUnderBall].exists) {
+			this.brickGrid[brickIndexUnderBall].exists = false;
+			this.ballSpeedY *= -1;
+		}
+	}
 	
 
 	let paddleTopEdgeY = this.canvas.height-this.PADDLE_DIST_FROM_EDGE;
@@ -83,6 +114,12 @@ moveAll() {
 		let ballDistFromPaddleCenterX = this.ballX - centerOfPaddleX;
 		this.ballSpeedX = ballDistFromPaddleCenterX * 0.35;
 	}
+
+
+},
+
+rowColToArrayIndex(col, row) {
+	return col + this.BRICK_COLS * row;
 },
 
 drawAll() {
@@ -104,14 +141,41 @@ colorCircle(centerX,centerY, radius, fillColor) {
 	this.canvasContext.beginPath();
 	this.canvasContext.arc(centerX,centerY, 10, 0,Math.PI*2, true);
 	this.canvasContext.fill();
-}
+},
+play(){
+	
+	this.$router.push({ path: '/multi' })
+},
 
-    }
+	},
+
+
+	
+
   }
 </script>
 <style>
-canvas{
+#homeCanvas{
+	width: 100%;
     position: fixed;
     z-index: +1;
+}
+.container{
+	position: absolute;
+}
+
+.blink{
+	background-color: rgb(0, 0, 0);
+	font-size: 25px;
+	color: white;
+	animation: blink 1.5s linear infinite;
+}
+@keyframes blink{
+0%{opacity: 0;}
+50%{opacity: .5;}
+100%{opacity: 1;}
+}
+.level{
+	opacity: 0.08;
 }
 </style>
