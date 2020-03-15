@@ -8,10 +8,19 @@
 		</v-card>
 		<canvas id="gameCanvas">
 		</canvas>
-		<v-layout class="align-end" v-if="gameActive" >
+		<div class="white--text justify-left scoreboard" v-if="gameActive">
+			<v-card class="transparent white--text text--center" width="15%">
+				<v-card-title class="title">score: {{brickHit}}</v-card-title>
+			</v-card>
+		</div>
+		<v-layout class="align-end " v-if="gameActive" fluid>
 
-			<v-progress-linear v-for="blast in blasts" :class="`${blast.class} mx-2`" :key="blast.index" v-model="blast.timer" :background-color="`rgb(255, 165, 0,${blast.backgroundFade})`" :color="`rgb(255, 165, 0, ${blast.fade})`" height="40" reactive>
-				<strong>{{blast.text}}</strong>
+			<v-progress-linear v-for="blast in blasts" :class="`${blast.class} mx-2 relative blink_me`" :key="blast.index" v-model="blast.timer" :background-color="`rgb(255, 165, 0,${blast.backgroundFade})`" :color="`rgb(255, 165, 0, ${blast.fade})`" height="40" reactive>
+				<div class="blasttext ml-6"><strong>{{blast.text}}</strong></div>
+				<div class="blastimage text-center justify-center absolute">
+					<v-img :src="blast.image" alt="image" srcset="" height="40" width="70"></v-img>
+				</div>
+				<div v-if="blast.extraBall" class="blasttext  ml-6"><strong>{{blast.counter}}/3</strong></div>
 			</v-progress-linear>
 		</v-layout>
 	</v-container>
@@ -24,12 +33,7 @@
     data: () => ({
         canvas: null, 
 		canvasContext: null,
-		radius: window.innerHeight/100,
 
-		ballX: window.innerWidth/2,
-		ballY: window.innerHeight/3,
-		ballSpeedX: window.innerWidth/600,
-		ballSpeedY: window.innerHeight/500,
 
 		PADDLE_WIDTH: window.innerWidth/15,
 		PADDLE_DIST_FROM_EDGE: window.innerHeight/9,
@@ -56,14 +60,28 @@
 		i:null,
 //ball
 		ballColor: 'white',
+		radius: window.innerHeight/100,
 
+		ballX: window.innerWidth/2,
+		ballY: window.innerHeight/3,
+		ballSpeedX: window.innerWidth/300,
+		ballSpeedY: window.innerHeight/250,
+		newBallCount: 1,
+		ghostBall: false,
+		ballStorage: [
+			{id: 0, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: window.innerWidth/300, Yspeed: window.innerHeight/250, radius: window.innerHeight/100, color: "white", reflect: true, active: true},
+			{id: 1, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false},
+			{id: 2, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false},
+			{id: 3, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false},
+		],
+		balls: [],
 //blast
 		
 		blasts: [
-			{fade:0.01, backgroundFade: 0.5, text: "Q", class: "", timer: 100, timerSpeed: 6, active: false, ballColor: "yellow", keyCode: 81, speedBall: true},
-			{fade:0.01, backgroundFade: 0.5, text: "W", class: "", timer: 100, timerSpeed: 0.5, active: false, ballColor: "red", keyCode: 87, goldball: true},
-			{fade:0.01, backgroundFade: 0.5, text: "E", class: "", timer: 100, timerSpeed: 0.1, active: false, ballColor: "yellow", keyCode: 69},
-			{fade:0.01, backgroundFade: 0.5, text: "R", class: "", timer: 100, timerSpeed: 0.05, active: false, ballColor: "yellow", keyCode: 82},
+			{fade:0.01, backgroundFade: 0.5, text: "Q", class: "", timer: 100, timerSpeed: 2, active: false, ballColor: "blue", keyCode: 81, speedBall: true, image: "/speedBall.png"},
+			{fade:0.01, backgroundFade: 0.5, text: "W", class: "", timer: 100, timerSpeed: 0.1, active: false, ballColor: "yellow", keyCode: 87, extraBall: true, counter: 0, image: "/damageBall.png"},
+			{fade:0.01, backgroundFade: 0.5, text: "E", class: "", timer: 100, timerSpeed: 0.5, active: false, ballColor: "red", keyCode: 69, goldBall: true, image: "/ghostBall.png"},
+			{fade:0.01, backgroundFade: 0.5, text: "R", class: "", timer: 100, timerSpeed: 0.05, active: false, ballColor: "yellow", keyCode: 82, image: "/starBall.png"},
 		]
 
 	}),
@@ -90,6 +108,12 @@
 	this.canvas.addEventListener('mousemove', this.updateMousePos);
 	
 	window.addEventListener('keyup', this.blastGoldball);
+
+	this.ballStorage.forEach(el => {
+		if(el.active){
+			this.balls.push(el)
+		}
+	});
 	
 	class Brick{ 
 		constructor(color, fade, exists) {
@@ -98,6 +122,7 @@
 		this.exists = exists
 		}
 	}
+	
 	
 	for(this.i=0; this.i< 3*this.BRICK_COLS; this.i++){
 
@@ -138,9 +163,16 @@
 
 			console.log(this.brickGrid)
 		},
-		ballReset(){
-			this.ballX = this.canvas.width/2
-			this.ballY = this.canvas.height/2
+		ballReset(ball){
+			
+			if(ball.id <= 0){
+					ball.Xpos = this.canvas.width/2
+					ball.Ypos = this.canvas.height/2				
+			}else{
+				var removeIndex = this.balls.map(function(item) { return item.id; })
+									.indexOf(ball.id);
+				~removeIndex && this.balls.splice(removeIndex, 1);
+			}
 		},
 		updateAll(){
 			this.moveAll()
@@ -158,8 +190,6 @@
 			this.mouseX = evt.clientX - rect.left - root.scrollLeft
 			this.mouseY = evt.clientY - rect.top - root.scrollTop
 			this.paddleX = this.mouseX - this.PADDLE_WIDTH/2	
-			}else{
-				console.log('wehewww')
 			}
 	
 		},
@@ -172,21 +202,24 @@
 		},
 
 		ballMove(){
-			this.ballX += this.ballSpeedX;
-			this.ballY += this.ballSpeedY;
+			this.balls.forEach(ball => {
+			ball.Xpos += ball.Xspeed;
+			ball.Ypos += ball.Yspeed;
 
-			if(this.ballX > this.canvas.width - this.radius){
-				this.ballSpeedX *= -1;
+			if(ball.Xpos > this.canvas.width - ball.radius){
+				ball.Xspeed *= -1;
 			}
-			if(this.ballX < this.radius){
-				this.ballSpeedX *= -1;
+			if(ball.Xpos < ball.radius){
+				ball.Xspeed *= -1;
 			}
-			if(this.ballY > this.canvas.height - this.radius){
-				this.ballReset()
+			if(ball.Ypos > this.canvas.height - ball.radius){
+				this.ballReset(ball)
 			}
-			if(this.ballY < this.radius){
-				this.ballSpeedY *= -1
+			if(ball.Ypos < ball.radius){
+				ball.Yspeed *= -1
 			}
+			});
+
 		},
 
 		isBrickAtColRow(col, row) {
@@ -200,71 +233,82 @@
 		},
 		
 		ballBrickHandling(){
-			var ballBrickCol = Math.floor(this.ballX / this.BRICK_W);
-			var ballBrickRow = Math.floor(this.ballY / this.BRICK_H);
-			var brickIndexUnderBall = this.rowColToArrayIndex(ballBrickCol, ballBrickRow);
+			this.balls.forEach(el => {
+			var ballBrickCol = Math.floor(el.Xpos / this.BRICK_W);
+			var ballBrickRow = Math.floor(el.Ypos / this.BRICK_H);
+			var brickIndexUnderBall = this.rowColToArrayIndex(ballBrickCol, ballBrickRow);		
 			if(ballBrickCol >= 0 && ballBrickCol < this.BRICK_COLS &&
-				ballBrickRow >= 0 && ballBrickRow < this.BRICK_ROWS) {
-
+			ballBrickRow >= 0 && ballBrickRow < this.BRICK_ROWS) {
 				if(this.brickGrid[brickIndexUnderBall].exists) {
-
+					if(el.id > 0){
+						this.brickGrid[brickIndexUnderBall].exists = false
+						this.ballReset(el);
+					}else if(this.ghostBall){
+						this.brickGrid[brickIndexUnderBall].fade -= 0.1;
+					}else{
 					if(this.brickGrid[brickIndexUnderBall].fade > 0.5){
 						if(this.goldball){
 							this.brickGrid[brickIndexUnderBall].exists = false
+							this.brickHit += 5;
 						}else{
 							this.brickGrid[brickIndexUnderBall].fade -= 0.1;
+							this.brickHit++;
 						}
 					}else{
 						this.brickGrid[brickIndexUnderBall].exists = false
 					}
-					
-					let prevBallX = this.ballX - this.ballSpeedX;
-					let prevBallY = this.ballY - this.ballSpeedY;
+					let prevBallX = el.Xpos - el.Xspeed;
+					let prevBallY = el.Ypos - el.Yspeed;
 					let prevBrickCol = Math.floor(prevBallX / this.BRICK_W)
 					let prevBrickRow = Math.floor(prevBallY / this.BRICK_H)
 
 					var bothTestsFailed = true;
-
 			if(prevBrickCol != ballBrickCol) {
 				if(this.isBrickAtColRow(prevBrickCol, ballBrickRow) == false) {
-					this.ballSpeedX *= -1;
+					el.Xspeed *= -1;
 					bothTestsFailed = false;
 				}
 			}
 			if(prevBrickRow != ballBrickRow) {
 				if(this.isBrickAtColRow(ballBrickCol, prevBrickRow) == false) {
-					this.ballSpeedY *= -1;
+						el.Yspeed *= -1;	
 					bothTestsFailed = false;
 				}
 			}
-
 			if(bothTestsFailed) { // armpit case, prevents ball from going through
-				this.ballSpeedX *= -1;
-				this.ballSpeedY *= -1;
+				el.Xspeed *= -1;
+				el.Yspeed *= -1;
 			}
 
 			this.goldball = false
-			this.ballColor = 'white'
+			el.color = 'white'
 					
 				}
-			}
+			}						
+					}
+				
+			});
 		},
 
 		ballPaddleHandling(){
-						let paddleTopEdgeY = this.canvas.height-this.PADDLE_DIST_FROM_EDGE;
+			let paddleTopEdgeY = this.canvas.height-this.PADDLE_DIST_FROM_EDGE;
 			let paddleBottomEdgeY = paddleTopEdgeY + this.PADDLE_THICKNESS;
 			let paddleLeftEdgeX = this.paddleX;
 			let paddleRightEdgeX = paddleLeftEdgeX + this.PADDLE_WIDTH;
-			if( this.ballY > paddleTopEdgeY - this.radius && // below the top of paddle
-				this.ballY < paddleBottomEdgeY && // above bottom of paddle
-				this.ballX > paddleLeftEdgeX && // right of the left side of paddle
-				this.ballX < paddleRightEdgeX ) { // left of the left side of paddle
-				
-				this.ballSpeedY *= -1;
-				let centerOfPaddleX = this.paddleX+this.PADDLE_WIDTH/2;
-				let ballDistFromPaddleCenterX = this.ballX - centerOfPaddleX;
-				this.ballSpeedX = ballDistFromPaddleCenterX * 0.08;
-				}
+
+			this.balls.forEach(ball => {
+				if( ball.Ypos > paddleTopEdgeY - ball.radius && // below the top of paddle
+					ball.Ypos < paddleBottomEdgeY && // above bottom of paddle
+					ball.Xpos > paddleLeftEdgeX && // right of the left side of paddle
+					ball.Xpos < paddleRightEdgeX ) { // left of the left side of paddle
+					
+					ball.Yspeed *= -1;
+					let centerOfPaddleX = this.paddleX+this.PADDLE_WIDTH/2;
+					let ballDistFromPaddleCenterX = ball.Xpos - centerOfPaddleX;
+					ball.Xspeed = ballDistFromPaddleCenterX * 0.08;
+					}				
+			});
+
 		},
 
 		moveAll(){
@@ -300,10 +344,11 @@
 			this.canvasContext.fillStyle = 'black';
 
 			this.canvasContext.fillRect(0,0,this.canvas.width, this.canvas.height);
+			this.balls.forEach(ball => {
+					this.colorCircle(ball.Xpos,ball.Ypos,ball.radius,ball.color);
+			});
 
-			this.colorCircle(this.ballX,this.ballY, this.radius, this.ballColor);
-
-				this.canvasContext.fillStyle = 'white';
+			this.canvasContext.fillStyle = 'white';
 
 			this.canvasContext.fillRect(this.paddleX, this.canvas.height-this.PADDLE_DIST_FROM_EDGE,
 				this.PADDLE_WIDTH, this.PADDLE_THICKNESS);
@@ -325,29 +370,45 @@
 			this.canvasContext.fill();
 },
 		blastGoldball(e){
+			
 			this.blasts.forEach(el => {
 				if(e.keyCode == el.keyCode){
-					if(el.timer <= 0){
-					this.ballColor = el.ballColor
+					if(el.timer < 0){
+					this.balls[0].color = el.ballColor
 					el.active = true
 					el.backgroundFade = 0.5
 						if(el.speedBall){
-							this.ballSpeedY = this.ballSpeedY*3
-							this.ballSpeedX = this.ballSpeedX*3
+							this.balls[0].Yspeed = this.balls[0].Yspeed*3
+							this.balls[0].Xspeed = this.balls[0].Xspeed*3
+							el.timer = 100;
 								setTimeout(() => {
-									this.ballSpeedY = this.ballSpeedY/3
-									this.ballSpeedX = this.ballSpeedX/3
-									el.timer = 100;
-								}, 1000);
+									this.balls[0].Yspeed = this.balls[0].Yspeed/3
+									this.balls[0].Xspeed = this.balls[0].Xspeed/3
+								}, 250);
 						}
-						if(el.goldball){
-							this.goldball = true
-							setTimeout(() => {
+						if(el.goldBall){
+							this.ghostBall = !this.ghostBall
+						}
+						
+						if(el.extraBall){
+							el.counter--;
+							this.ballStorage.forEach(el => {
+								if(el.id == this.newBallCount){
+									el.Xpos = this.paddleX + this.PADDLE_WIDTH/2
+									el.Ypos = this.canvas.height-this.PADDLE_DIST_FROM_EDGE-10
+									el.Xspeed = 0;
+									el.Yspeed =  -(window.innerHeight/250)
+									this.balls.push(el)
+									console.log(this.newBallCount)
+								}
+							});
+							if(this.newBallCount >= 3){
 								el.timer = 100;
-							}, 500);
+								this.newBallCount = 1
+							}else{
+								this.newBallCount++;
+							}
 						}
-					
-
 					}
 				}
 			});
@@ -355,9 +416,13 @@
 		},
 		blastTimer(){
 			this.blasts.forEach(el => {
+				//let prevTime = el.timer + el.timerSpeed
 				if(el.timer >= 0){
 					el.timer = el.timer - el.timerSpeed 
 				}else{
+					if(el.extraBall && el.counter == 0){
+						el.counter = 3
+					}
 				el.backgroundFade = 1
 			}
 			});
@@ -387,14 +452,22 @@ canvas{
 	color: white;
 	animation: blink 1.5s linear infinite;
 }
-.q_timer{
-	background-image: url('/flameBlast.png') !important;
-}
 @keyframes blink{
 0%{opacity: 0;}
 50%{opacity: .5;}
 100%{opacity: 1;}
 }
+
+.blink_me {
+  animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0.5;
+  }
+}
+
 .level{
 	opacity: 0.08;
 }
@@ -402,9 +475,21 @@ canvas{
 	z-index: +2;
 	background-color: rgb(32, 32, 32) !important;
 }
-.active
-{
-		
+.scoreboard{
+	position: absolute;
+	width: 100%;
+}
+.title{
+	opacity: 0.6;
+}
+.blasttext{
+	width: 100%
+}
+.relative{
+	position: relative;
+}
+.absolute{
+	position: absolute;
 }
 
 </style>
