@@ -10,17 +10,19 @@
 		</canvas>
 		<div class="white--text justify-left scoreboard" v-if="gameActive">
 			<v-card class="transparent white--text text--center" width="15%">
-				<v-card-title class="title">score: {{brickHit}}</v-card-title>
+				<v-card-title class="title">score: {{brickHitCount}}</v-card-title>
 			</v-card>
 		</div>
-		<v-layout class="align-end " v-if="gameActive" fluid>
 
-			<v-progress-linear v-for="blast in blasts" :class="`${blast.class} mx-2 relative blink_me`" :key="blast.index" v-model="blast.timer" :background-color="`rgb(255, 165, 0,${blast.backgroundFade})`" :color="`rgb(255, 165, 0, ${blast.fade})`" height="40" reactive>
-				<div class="blasttext ml-6"><strong>{{blast.text}}</strong></div>
+
+		<v-layout class="align-end" v-if="gameActive" fluid>
+
+			<v-progress-linear v-for="blast in blasts" :class="`${blast.class} mx-2 relative`" :key="blast.index" v-model="blast.timer" :background-color="`rgb(255, 165, 0,${blast.backgroundFade})`" :color="`rgb(255, 165, 0, ${blast.fade})`" height="40" reactive>
+				<div class="blasttext ml-6 hidden-xs-only"><strong>{{blast.text}}</strong></div>
 				<div class="blastimage text-center justify-center absolute">
 					<v-img :src="blast.image" alt="image" srcset="" height="40" width="70"></v-img>
 				</div>
-				<div v-if="blast.extraBall" class="blasttext  ml-6"><strong>{{blast.counter}}/3</strong></div>
+				<div v-if="blast.extraBall" class="blasttext hidden-xs-only ml-6"><strong>{{blast.counter}}/3</strong></div>
 			</v-progress-linear>
 		</v-layout>
 	</v-container>
@@ -51,7 +53,6 @@
 
 		brickGrid: [],
 //user stats
-		brickHit: 0,
 		brickDestroyed: 0,
 
 //extra
@@ -65,43 +66,44 @@
 		ballX: window.innerWidth/2,
 		ballY: window.innerHeight/3,
 		ballSpeedX: window.innerWidth/300,
-		ballSpeedY: window.innerHeight/250,
+		ballSpeedY: window.innerWidth/300,
 		newBallCount: 1,
 		ghostBall: false,
 		ballStorage: [
-			{id: 0, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: window.innerWidth/300, Yspeed: window.innerHeight/250, radius: window.innerHeight/100, color: "white", reflect: true, active: true},
+			{id: 0, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: -window.innerWidth/300, Yspeed: -window.innerHeight/250, radius: window.innerHeight/100, color: "white", reflect: true, active: true},
 			{id: 1, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false},
 			{id: 2, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false},
 			{id: 3, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false},
 		],
 		balls: [],
 //blast
-		
 		blasts: [
 			{fade:0.01, backgroundFade: 0.5, text: "Q", class: "", timer: 100, timerSpeed: 2, active: false, ballColor: "blue", keyCode: 81, speedBall: true, image: "/speedBall.png"},
 			{fade:0.01, backgroundFade: 0.5, text: "W", class: "", timer: 100, timerSpeed: 0.1, active: false, ballColor: "yellow", keyCode: 87, extraBall: true, counter: 0, image: "/damageBall.png"},
 			{fade:0.01, backgroundFade: 0.5, text: "E", class: "", timer: 100, timerSpeed: 0.5, active: false, ballColor: "red", keyCode: 69, goldBall: true, image: "/ghostBall.png"},
-			{fade:0.01, backgroundFade: 0.5, text: "R", class: "", timer: 100, timerSpeed: 0.05, active: false, ballColor: "yellow", keyCode: 82, image: "/starBall.png"},
-		]
+			{fade:0.01, backgroundFade: 0.5, text: "R", class: "", timer: 100, timerSpeed: 0.05, active: false, ballColor: "yellow", keyCode: 82, starBall: true, image: "/starBall.png"},
+		],
 
+		brickAdd: 0,
+		brickMove: 0,
+		brickHitBall: false,
+		brickMoveSpeed: 0.05,
+		gamePause: false,
+		paddleMenuShuffle: false,
+		brickHitCount: 0
 	}),
 	created() {
 	window.addEventListener("resize", this.resize);
-
-
-	
 	},
-
-
     mounted(){
-
-	
     this.canvas = document.getElementById('gameCanvas');
 	this.canvasContext = this.canvas.getContext('2d');
 	
 	let framesPerSecond = 100;
+
 	setInterval(this.updateAll, 1000/framesPerSecond)
 	setInterval(this.blastTimer, 100)
+
     
     this.canvas.width = window.innerWidth;
 	this.canvas.height = window.innerHeight;
@@ -114,42 +116,13 @@
 			this.balls.push(el)
 		}
 	});
-	
-	class Brick{ 
-		constructor(color, fade, exists) {
-		this.color = color
-		this.fade = fade
-		this.exists = exists
-		}
-	}
-	
-	
-	for(this.i=0; this.i< 3*this.BRICK_COLS; this.i++){
-
-    let color = 255;
-	let fade = 1;
-	let exists = false
-
-    this.brickGrid.push(new Brick(color,fade,exists));
-}
-	for(; this.i<this.BRICK_COLS * this.BRICK_ROWS; this.i++){
-
-    let color = 255;
-	let fade = 1;
-	let exists = true
-
-    this.brickGrid.push(new Brick(color,fade,exists));
-}
-
+	this.brickReset();
 	},
 	methods: {
-
 		...mapMutations(["setGameActive"]),
-		
 		resize(){
 			this.canvas.width = window.innerWidth;
 			this.canvas.height = window.innerHeight;
-
 			this.radius = window.innerHeight/100,
 			this.ballX = window.innerWidth/2,
 			this.ballY = window.innerHeight/2,
@@ -160,8 +133,6 @@
 			this.PADDLE_THICKNESS = window.innerHeight/70,
 			this.BRICK_W = window.innerWidth/10,
 			this.BRICK_H = window.innerHeight/30
-
-			console.log(this.brickGrid)
 		},
 		ballReset(ball){
 			
@@ -174,6 +145,43 @@
 				~removeIndex && this.balls.splice(removeIndex, 1);
 			}
 		},
+		brickReset(){
+			let red = 0
+			let green = 255
+			let blue = 0
+			let fade = 1;
+			this.brickGrid.length = 0;
+
+	class Brick{ 
+		constructor(red, green, blue, fade, exists) {
+		this.red = red
+		this.green = green
+		this.blue = blue
+		this.fade = fade
+		this.exists = exists
+		}
+	}
+	
+	
+	for(this.i=0; this.i< 3*this.BRICK_COLS; this.i++){
+
+
+	let exists = false
+
+    this.brickGrid.push(new Brick(red, green, blue ,fade,exists));
+}
+	for(; this.i<this.BRICK_COLS * this.BRICK_ROWS; this.i++){
+
+	let fade = 1;
+	if(Math.random() < 0.4){
+		let exists = true
+		this.brickGrid.push(new Brick(red, green, blue ,fade,exists));
+	}else{
+		let exists = false
+		this.brickGrid.push(new Brick(red, green, blue , fade, exists));
+	}
+}
+		},
 		updateAll(){
 			this.moveAll()
 			this.drawAll()
@@ -181,7 +189,6 @@
 				this.updateMousePosMenu()
 			}
 		},
-
 		updateMousePos(evt){
 			if(this.gameActive){
 			let rect = this.canvas.getBoundingClientRect();
@@ -189,15 +196,20 @@
 
 			this.mouseX = evt.clientX - rect.left - root.scrollLeft
 			this.mouseY = evt.clientY - rect.top - root.scrollTop
+			/*
+			this.balls[0].Xpos = this.mouseX
+			this.balls[0].Ypos = this.mouseY
+			this.balls[0].Xspeed = -window.innerWidth/300,
+			this.balls[0].Yspeed = -window.innerHeight/250*/
+			
 			this.paddleX = this.mouseX - this.PADDLE_WIDTH/2	
 			}
-	
 		},
 		updateMousePosMenu(){
-				if(this.paddleHit){
-					this.paddleX = this.ballX - this.PADDLE_WIDTH/1.6;
+				if(this.paddleMenuShuffle){
+					this.paddleX = this.balls[0].Xpos - this.PADDLE_WIDTH/1.3;
 				}else{
-					this.paddleX = this.ballX - this.PADDLE_WIDTH/1.5;
+					this.paddleX = this.balls[0].Xpos - this.PADDLE_WIDTH/1.2;
 				}
 		},
 
@@ -231,37 +243,48 @@
 				return false;
 			}
 		},
+		XposToCol(Xpos){
+			let col = Math.floor(Xpos/this.BRICK_W)
+			console.log(col)
+		},
 		
 		ballBrickHandling(){
 			this.balls.forEach(el => {
+			
 			var ballBrickCol = Math.floor(el.Xpos / this.BRICK_W);
-			var ballBrickRow = Math.floor(el.Ypos / this.BRICK_H);
-			var brickIndexUnderBall = this.rowColToArrayIndex(ballBrickCol, ballBrickRow);		
+			var ballBrickRow = Math.floor((el.Ypos - this.brickMove)/ (this.BRICK_H));
+			var brickIndexUnderBall = this.rowColToArrayIndex(ballBrickCol, ballBrickRow);
+			
+			let prevBallX = el.Xpos - el.Xspeed;
+			let prevBallY = (el.Ypos - this.brickMove) - el.Yspeed;
+			let prevBrickCol = Math.floor(prevBallX / this.BRICK_W)
+			let prevBrickRow = Math.floor(prevBallY / this.BRICK_H)
+
+			
+			
 			if(ballBrickCol >= 0 && ballBrickCol < this.BRICK_COLS &&
 			ballBrickRow >= 0 && ballBrickRow < this.BRICK_ROWS) {
 				if(this.brickGrid[brickIndexUnderBall].exists) {
+					let col = Math.floor(el.Xpos/this.BRICK_W)
+					let prevCol = Math.floor((el.Xpos-el.Xspeed)/this.BRICK_W)
+					if(!this.brickHitBall || col !== prevCol){
 					if(el.id > 0){
 						this.brickGrid[brickIndexUnderBall].exists = false
 						this.ballReset(el);
 					}else if(this.ghostBall){
-						this.brickGrid[brickIndexUnderBall].fade -= 0.1;
+						this.brickGrid[brickIndexUnderBall].fade -= 0.025;
 					}else{
 					if(this.brickGrid[brickIndexUnderBall].fade > 0.5){
 						if(this.goldball){
 							this.brickGrid[brickIndexUnderBall].exists = false
-							this.brickHit += 5;
+							this.brickHitCount += 5;
 						}else{
 							this.brickGrid[brickIndexUnderBall].fade -= 0.1;
-							this.brickHit++;
+							this.brickHitCount++;
 						}
 					}else{
 						this.brickGrid[brickIndexUnderBall].exists = false
 					}
-					let prevBallX = el.Xpos - el.Xspeed;
-					let prevBallY = el.Ypos - el.Yspeed;
-					let prevBrickCol = Math.floor(prevBallX / this.BRICK_W)
-					let prevBrickRow = Math.floor(prevBallY / this.BRICK_H)
-
 					var bothTestsFailed = true;
 			if(prevBrickCol != ballBrickCol) {
 				if(this.isBrickAtColRow(prevBrickCol, ballBrickRow) == false) {
@@ -279,15 +302,17 @@
 				el.Xspeed *= -1;
 				el.Yspeed *= -1;
 			}
-
-			this.goldball = false
-			el.color = 'white'
-					
-				}
-			}						
 					}
-				
-			});
+					console.log(this.brickHitBall)
+						}
+						this.brickHitBall = true
+						}else{
+						this.brickHitBall = false
+					}						
+				}else{
+						this.brickHitBall = false
+					}	
+			});				
 		},
 
 		ballPaddleHandling(){
@@ -306,38 +331,40 @@
 					let centerOfPaddleX = this.paddleX+this.PADDLE_WIDTH/2;
 					let ballDistFromPaddleCenterX = ball.Xpos - centerOfPaddleX;
 					ball.Xspeed = ballDistFromPaddleCenterX * 0.08;
+					this.paddleMenuShuffle = !this.paddleMenuShuffle
 					}				
 			});
 
 		},
 
 		moveAll(){
-			
 			this.ballMove()
-
-			this.ballBrickHandling()
-
-			this.ballPaddleHandling()
-	
+			if(this.gameActive){
+			this.ballBrickHandling()				
+			}
+			this.ballPaddleHandling()				
 		},
 
 		rowColToArrayIndex(col, row) {
 			return col + this.BRICK_COLS * row;
 		},
 		drawBricks(){
-
 			for(var eachRow=0;eachRow<this.BRICK_ROWS;eachRow++) {
 				for(var eachCol=0;eachCol<this.BRICK_COLS;eachCol++) {
 
 					var arrayIndex = this.rowColToArrayIndex(eachCol, eachRow); 
 
 					if(this.brickGrid[arrayIndex].exists) {
-						this.canvasContext.fillStyle = `rgb(${this.brickGrid[arrayIndex].color}, 0, 0, ${this.brickGrid[arrayIndex].fade})`;
-						this.canvasContext.fillRect(this.BRICK_W*eachCol,this.BRICK_H*eachRow,
+						this.canvasContext.fillStyle = `rgb(${this.brickGrid[arrayIndex].red}, ${this.brickGrid[arrayIndex].green}, ${this.brickGrid[arrayIndex].blue}, ${this.brickGrid[arrayIndex].fade})`;
+						this.canvasContext.fillRect(this.BRICK_W*eachCol,this.BRICK_H*eachRow + this.brickMove,
 						this.BRICK_W-this.BRICK_GAP,this.BRICK_H-this.BRICK_GAP);
 					} // end of is this brick here
 				} // end of for each brick
 			} // end of for each row
+				this.brickMove = this.brickMove + this.brickMoveSpeed
+			if(this.brickMove >= (this.BRICK_H)){
+				this.addBricks();
+			}
 		},
 		
 		drawAll(){
@@ -355,9 +382,8 @@
 
 			this.colorText(this.mouseX+","+this.mouseY, this.mouseX, this.mouseY, 'yellow')
 			if(this.gameActive){
-				this.drawBricks()	
+				this.drawBricks();	
 			}
-			
 		},
 		colorText(showWords, textX, textY, fillColor){
 			this.canvasContext.fillStyle = fillColor;
@@ -370,13 +396,27 @@
 			this.canvasContext.fill();
 },
 		blastGoldball(e){
-			
+				if(e.keyCode == 27){
+					console.log("esc")
+					this.setGameActive(false)
+				}
+				if(e.keyCode == 32){
+					this.balls[0].Yspeed *= -1;
+					console.log("space")
+				}
+				if(e.keyCode == 66){
+					console.log("b")
+					this.brickReset();
+					this.brickMove = 0;
+				}
 			this.blasts.forEach(el => {
+				if(!this.dialog){
 				if(e.keyCode == el.keyCode){
 					if(el.timer < 0){
 					this.balls[0].color = el.ballColor
 					el.active = true
 					el.backgroundFade = 0.5
+					//speedball
 						if(el.speedBall){
 							this.balls[0].Yspeed = this.balls[0].Yspeed*3
 							this.balls[0].Xspeed = this.balls[0].Xspeed*3
@@ -386,10 +426,27 @@
 									this.balls[0].Xspeed = this.balls[0].Xspeed/3
 								}, 250);
 						}
+						//ghostball
 						if(el.goldBall){
+							if(this.ghostBall){
 							this.ghostBall = !this.ghostBall
+							el.timer = 100
+							el.class = ""							
+							}else{
+							this.ghostBall = !this.ghostBall
+							el.class = "blink_me"
+								setTimeout(() => {
+									if(this.ghostBall){
+										this.ghostBall = !this.ghostBall
+										el.timer = 100
+										el.class = ""										
+									}
+
+								}, 3000);								
+							}
+
 						}
-						
+						//extraBall
 						if(el.extraBall){
 							el.counter--;
 							this.ballStorage.forEach(el => {
@@ -399,7 +456,6 @@
 									el.Xspeed = 0;
 									el.Yspeed =  -(window.innerHeight/250)
 									this.balls.push(el)
-									console.log(this.newBallCount)
 								}
 							});
 							if(this.newBallCount >= 3){
@@ -409,10 +465,17 @@
 								this.newBallCount++;
 							}
 						}
+						if(el.starBall){
+							this.balls[0].Yspeed = this.balls[0].Yspeed*3
+							this.balls[0].Xspeed = this.balls[0].Xspeed*3
+							el.ballColor = 'yellow'
+							this.goldball = true;							
+						}
 					}
 				}
+				}
+
 			});
-			
 		},
 		blastTimer(){
 			this.blasts.forEach(el => {
@@ -427,9 +490,39 @@
 			}
 			});
 		},
-		play(){
-			this.gameActive = true;
-	
+		removeBricks(){
+			this.brickGrid.length = this.BRICK_COLS * 13
+		},
+		addBricks(){
+		class Brick{ 
+			constructor(red, green, blue, fade, exists) {
+			this.red = red
+			this.green = green
+			this.blue = blue
+			this.fade = fade
+			this.exists = exists
+		}
+	}
+	for(this.brickAdd = 0; this.brickAdd < 10; this.brickAdd++){
+			let red = 255;
+			let green = 0;
+			let blue = 0;
+			let fade = 1;
+			if(Math.random() > 0.5){
+				if(this.brickHitCount > 10){
+					blue = 255
+					red = 0
+				}
+				let exists = true
+				this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));
+			}else{
+				let exists = false
+				this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));
+			}
+	}
+	//this.brickGrid.splice((this.BRICK_ROWS)*this.BRICK_COLS, this.BRICK_COLS)
+	this.BRICK_ROWS = this.BRICK_ROWS + 1
+	this.brickMove = this.brickMove - this.BRICK_H 
 		},
 	},
 	computed: mapGetters(['gameActive'])
