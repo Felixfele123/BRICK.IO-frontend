@@ -13,18 +13,78 @@
 				<v-card-title class="title">score: {{brickHitCount}}</v-card-title>
 			</v-card>
 		</div>
+		<v-layout column align-center v-if="gameActive">
+			<div class="text-center justify-center">
+				<v-dialog dark v-model="dialog" width="500">
+				<v-card class="justify-center">
+				<v-row class="ma-0 text-center justify-center">
+					<v-card-title class="pb-0 primary-text">
+						CLEARED!
+					</v-card-title>
+				</v-row>
+
+				<v-row class="ma-0 text-center ">
+					<v-col>
+						<v-card-text class="pb-0">
+							HITS
+						</v-card-text>
+						<v-card-text class="pt-1 title">
+							{{brickHitCount}}
+						</v-card-text>
+					</v-col>
+					<v-col>
+						<v-card-text class="pb-0">
+							DESTROYED 
+						</v-card-text>
+						<v-card-text class="pt-1 title">
+							{{brickDestoryedCount}} 
+						</v-card-text>
+					</v-col>
+					<v-col>
+						<v-card-text class="pb-0">
+							TIME 
+						</v-card-text>
+						<v-card-text class="pt-1 title">
+							{{tenMinutes}}{{minutes}}:{{tenSeconds}}{{seconds}} 
+						</v-card-text>
+					</v-col>
+				</v-row>
+
+				<v-row class="ma-0 text-center justify-center">
+					<v-col class="pt-0 text-center justify-center align-center">
+						<v-avatar class="pb-1 mx-2" size="40">
+							<img src="coin.png" alt="" srcset="">
+						</v-avatar>
+							<span class="coins font-weight-light">255</span>							
+					</v-col>
 
 
-		<v-layout class="align-end" v-if="gameActive" fluid>
-
-			<v-progress-linear v-for="blast in blasts" :class="`${blast.class} mx-2 relative`" :key="blast.index" v-model="blast.timer" :background-color="`rgb(255, 165, 0,${blast.backgroundFade})`" :color="`rgb(255, 165, 0, ${blast.fade})`" height="40" reactive>
-				<div class="blasttext ml-6 hidden-xs-only"><strong>{{blast.text}}</strong></div>
-				<div class="blastimage text-center justify-center absolute">
-					<v-img :src="blast.image" alt="image" srcset="" height="40" width="70"></v-img>
-				</div>
-				<div v-if="blast.extraBall" class="blasttext hidden-xs-only ml-6"><strong>{{blast.counter}}/3</strong></div>
-			</v-progress-linear>
+					<v-col class="pt-0">
+						<v-card-text class="pb-0 title">
+							RANKING POINTS {{brickDestoryedCount}} 
+						</v-card-text>
+					</v-col>
+				</v-row>
+				</v-card>
+				</v-dialog>
+			</div>
 		</v-layout>
+		<v-container v-if="gameActive" fluid fill-height class="align-end justify-center pa-0">
+			<v-row height="40">
+				<v-progress-linear rounded class="mx-3" :buffer-value="healthBuffer" v-model="health" :background-color="healthBackgroundColor" :color="`rgb(0, 165, 0, 1)`" height="8" reactive>
+				</v-progress-linear>
+					
+				<v-col v-for="blast in blasts" :key="blast.index" class="pb-0 pt-1">
+					<v-progress-linear  :class="`${blast.class} `"  v-model="blast.timer" :background-color="`rgb(255, 165, 0,${blast.backgroundFade})`" :color="`rgb(255, 165, 0, ${blast.fade})`" height="40" reactive>
+						<div class="blasttext ml-6 hidden-xs-only"><strong>{{blast.text}}</strong></div>
+						<div class="blastimage text-center justify-center absolute">
+							<v-img :src="blast.image" alt="image" srcset="" height="40" width="70"></v-img>
+						</div>
+						<div v-if="blast.extraBall" class="blasttext hidden-xs-only ml-6"><strong>{{blast.counter}}/3</strong></div>
+					</v-progress-linear>
+				</v-col>
+			</v-row>
+		</v-container>
 	</v-container>
 </template>
 
@@ -38,7 +98,7 @@
 
 
 		PADDLE_WIDTH: window.innerWidth/15,
-		PADDLE_DIST_FROM_EDGE: window.innerHeight/9,
+		PADDLE_DIST_FROM_EDGE: window.innerHeight/8,
 		PADDLE_THICKNESS: window.innerHeight/70,
 		paddleX: window.innerWidth/2,
 		mouseX: null,
@@ -79,7 +139,7 @@
 //blast
 		blasts: [
 			{fade:0.01, backgroundFade: 0.5, text: "Q", class: "", timer: 100, timerSpeed: 2, active: false, ballColor: "blue", keyCode: 81, speedBall: true, image: "/speedBall.png"},
-			{fade:0.01, backgroundFade: 0.5, text: "W", class: "", timer: 100, timerSpeed: 0.1, active: false, ballColor: "yellow", keyCode: 87, extraBall: true, counter: 0, image: "/damageBall.png"},
+			{fade:0.01, backgroundFade: 0.5, text: "W", class: "", timer: 100, timerSpeed: 5, active: false, ballColor: "yellow", keyCode: 87, extraBall: true, counter: 0, image: "/damageBall.png"},
 			{fade:0.01, backgroundFade: 0.5, text: "E", class: "", timer: 100, timerSpeed: 0.5, active: false, ballColor: "red", keyCode: 69, goldBall: true, image: "/ghostBall.png"},
 			{fade:0.01, backgroundFade: 0.5, text: "R", class: "", timer: 100, timerSpeed: 0.05, active: false, ballColor: "yellow", keyCode: 82, starBall: true, image: "/starBall.png"},
 		],
@@ -92,10 +152,24 @@
 		paddleMenuShuffle: false,
 		brickHitCount: 0,
 		damage: 0.1,
+		brickDestoryedCount: 0,
+
+		healthBackgroundColor: 'black',
+		healthBuffer: 100,
+		health: 100,
+		mana: 70,
+		brickAddCount: 0,
+		dialog: false,
 
 		keyLeft: false,
 		keyRight: false,
 		keyDirection: 1,
+
+		//gameplay timer
+		seconds: 0,
+		tenSeconds: 0,
+		minutes: 0,
+		tenMinutes:0,
 
 		//vue bs, irrelevant
 		brickAdd: 0,
@@ -111,6 +185,7 @@
 
 	setInterval(this.updateAll, 1000/framesPerSecond)
 	setInterval(this.blastTimer, 100)
+	setInterval(this.timer, 1000)
 
     this.canvas.width = window.innerWidth;
 	this.canvas.height = window.innerHeight;
@@ -145,6 +220,19 @@
 			this.balls[0].Xpos = window.innerWidth/2
 			this.balls[0].Ypos = window.innerHeight/100
 		},
+		timer(){
+			if(this.seconds == 10){
+				this.seconds = 0;
+				this.tenSeconds += 1;
+			}
+			if(this.tenSeconds == 6){
+				this.tenSeconds = 0;
+				this.minutes += 1;
+			}
+
+			if(this.gameActive && this.dialog == false)
+			this.seconds += 1
+		},
 		ballReset(ball){
 			
 			if(ball.id <= 0){
@@ -163,35 +251,33 @@
 			let fade = 1;
 			this.brickGrid.length = 0;
 
-	class Brick{ 
-		constructor(red, green, blue, fade, exists) {
-		this.red = red
-		this.green = green
-		this.blue = blue
-		this.fade = fade
-		this.exists = exists
-		}
-	}
-	
-	
-	for(this.i=0; this.i< 3*this.BRICK_COLS; this.i++){
+			class Brick{ 
+				constructor(red, green, blue, fade, exists) {
+				this.red = red
+				this.green = green
+				this.blue = blue
+				this.fade = fade
+				this.exists = exists
+				}
+			}
+				for(this.i=0; this.i< 3*this.BRICK_COLS; this.i++){
 
 
-	let exists = false
+				let exists = false
 
-    this.brickGrid.push(new Brick(red, green, blue ,fade,exists));
-}
-	for(; this.i<this.BRICK_COLS * this.BRICK_ROWS; this.i++){
+				this.brickGrid.push(new Brick(red, green, blue ,fade,exists));
+			}
+				for(; this.i<this.BRICK_COLS * this.BRICK_ROWS; this.i++){
 
-	let fade = 1;
-	if(Math.random() > 0.95){
-		let exists = true
-		this.brickGrid.push(new Brick(red, green, blue ,fade,exists));
-	}else{
-		let exists = false
-		this.brickGrid.push(new Brick(red, green, blue , fade, exists));
-	}
-}
+				let fade = 1;
+				if(Math.random() > 0.95){
+					let exists = true
+					this.brickGrid.push(new Brick(red, green, blue ,fade,exists));
+				}else{
+					let exists = false
+					this.brickGrid.push(new Brick(red, green, blue , fade, exists));
+				}
+			}
 		},
 		updateAll(){
 			this.moveAll()
@@ -274,11 +360,19 @@
 			
 			if(ballBrickCol >= 0 && ballBrickCol < this.BRICK_COLS &&
 			ballBrickRow >= 0 && ballBrickRow < this.BRICK_ROWS) {
+
+			let bricksLeft = this.brickGrid.filter(el => el.exists).length
+
+			if(bricksLeft == 0 && this.brickDestoryedCount > 20){
+				this.dialog = true
+			}//Game finished successfully
+
 				if(this.brickGrid[brickIndexUnderBall].exists) {
 
 					if(!this.brickHitBall || col !== prevCol){
 					if(el.id > 0){
 						this.brickGrid[brickIndexUnderBall].exists = false
+						this.brickDestoryedCount += 1;
 						this.ballReset(el);
 					}else if(this.ghostBall){
 						this.brickGrid[brickIndexUnderBall].fade -= this.damage;
@@ -286,13 +380,16 @@
 					if(this.brickGrid[brickIndexUnderBall].fade > 0.5){
 						if(this.goldball){
 							this.brickGrid[brickIndexUnderBall].exists = false
+							this.brickDestoryedCount += 1;
 							this.brickHitCount += 5;
+
 						}else{
 							this.brickGrid[brickIndexUnderBall].fade -= this.damage;
 							this.brickHitCount++;
 						}
 					}else{
 						this.brickGrid[brickIndexUnderBall].exists = false
+						this.brickDestoryedCount += 1;
 					}
 					var bothTestsFailed = true;
 			if(prevBrickCol != ballBrickCol) {
@@ -304,7 +401,6 @@
 					bothTestsFailed = false;
 					
 			}
-			console.log("prevBrickRow: " + prevBrickRow + " ballBrickRow: " + ballBrickRow + " Ypos: " + el.Ypos + " brickMove: " + this.brickMove + " Yspeed: " + el.Yspeed)
 
 			if(bothTestsFailed) { // armpit case, prevents ball from going through
 				el.Xspeed *= -1;
@@ -369,6 +465,11 @@
 				this.brickMove = this.brickMove + this.brickMoveSpeed
 			if(this.brickMove >= (this.BRICK_H)){
 				this.addBricks();
+				if(this.health <= 0){
+					this.gameReset()
+					console.log()
+				}
+				
 			}
 		},
 		drawAll(){
@@ -404,50 +505,60 @@
 			this.canvasContext.beginPath();
 			this.canvasContext.arc(centerX,centerY, radius, 0,Math.PI*2, true);
 			this.canvasContext.fill();
+		},
+		gameReset(){
+			this.brickReset();
+			this.brickMove = 0;
+			this.BRICK_ROWS = 7
+			this.blasts.forEach(el => {
+				el.timer = 100
+			});
+			this.health = 100
+			this.healthBuffer = 100
+			this.brickGrid.length = this.BRICK_COLS * 7
 		},	
 		keyPress(e){
-			console.log(e.keyCode)
 				if(e.keyCode == 37){
 					this.keyLeft = true
 					this.keyDirection = -1
 				}
+				if(e.keyCode == 67){
+					this.dialog = true
+				}
 				if(e.keyCode == 39){
 					this.keyRight = true
 					this.keyDirection = 1
-					console.log(this.brickGrid)
 				}
 				if(e.keyCode == 27){
-					console.log("esc")
 					this.setGameActive(false)
 				}
 				if(e.keyCode == 32){
 					this.balls[0].Yspeed *= -1;
-					console.log("space")
 				}
 				if(e.keyCode == 66){
-					console.log("b")
-					this.brickReset();
-					this.brickMove = 0;
-					this.BRICK_ROWS = 7
-					this.brickGrid.length = this.BRICK_COLS * 7
-					console.log(this.BRICK_ROWS)
+					this.gameReset()
 				}
 				this.blast(e)
-				console.log(this.keyLeft + ", " + this.keyRight)		
 
 		},
 		keyUp(e){
+			if(e.keyCode == 38){
+				//up
+				this.brickMoveSpeed *= 2
+			}
+			if(e.keyCode == 40){
+				//down
+				this.brickMoveSpeed *= 0.5
+			}
 			if(e.keyCode == 37){
 				this.keyLeft = false
 			}
 			if(e.keyCode == 39){
 				this.keyRight = false
 			}	
-			console.log(this.keyLeft + ", " + this.keyRight)		
 		},
 		blast(e){
 		this.blasts.forEach(el => {
-			if(!this.dialog){
 				if(e.keyCode == el.keyCode){
 					if(el.timer < 0){
 					this.balls[0].color = el.ballColor
@@ -508,7 +619,6 @@
 						}
 					}
 				}
-			}
 		});
 		},
 		blastTimer(){
@@ -525,9 +635,23 @@
 			});
 		},
 		removeBricks(){
-			this.brickGrid.length = this.BRICK_COLS * 13
+		this.brickGrid.forEach(el => {
+			let index = this.brickGrid.indexOf(el)
+			if(index >= 240 && el.exists){
+				el.exists = false
+				let damage = (el.fade*5)
+				this.health -= damage
+				this.healthBackgroundColor = "red"
+				setTimeout(() =>{
+				this.healthBuffer -= damage	
+				}, 500)
+			}
+		});
 		},
 		addBricks(){
+		if(this.brickGrid.length > 240){
+			this.removeBricks()
+		}
 		class Brick{ 
 			constructor(red, green, blue, fade, exists) {
 			this.red = red
@@ -535,44 +659,37 @@
 			this.blue = blue
 			this.fade = fade
 			this.exists = exists
-		}
-	}
-	for(this.brickAdd = 0; this.brickAdd < 10; this.brickAdd++){
-			let red = 0;
-			let green = 255;
-			let blue = 0;
-			let fade = 1;
-			let random = Math.random()
-			if(random > 0.8 && random < 1 ){
-				let random = Math.random()
-				if(random > 0.75 && random < 1 ){
-					red = 20;
-					green = 23;
-					blue = 168;
-					console.log("blue")
-				}
-				if(random > 0.5 && random < 0.75){
-					red = 19;
-					green = 156;
-					blue = 26;
-				}
-				if(random > 0.25 && random < 0.5){
-					red = 147;
-					green = 163;
-					blue = 148;
-				}
-				if(random > 0 && random < 0.25){
-					red = 255;
-					green = 0;
-					blue = 0;
-				}
-				let exists = true
-				this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));
-			}else{
-				let exists = false
-				this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));
 			}
-	}
+		}
+		for(this.brickAdd = 0; this.brickAdd < 10; this.brickAdd++){
+
+				let red = 0;
+				let green = 255;
+				let blue = 0;
+				let fade = 1;
+				let random = Math.random()
+				
+				if(random > 0.8 && random < 1 ){
+					if(this.brickGrid.length > 150){
+						red = 255
+						green = 0
+					}
+					if(this.brickGrid.length > 250){
+						blue = 255
+						red = 0
+					}
+					if((this.brickGrid.length > 0 && this.brickGrid.length < 100) || (this.brickGrid.length > 150 && this.brickGrid.length < 250) || (this.brickGrid.length > 300 && this.brickGrid.length < 400)){
+					let exists = true
+					this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));
+					}else{
+					let exists = false
+					this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));					
+					}
+				}else{
+					let exists = false
+					this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));
+				}				
+		}
 	//this.brickGrid.splice((this.BRICK_ROWS)*this.BRICK_COLS, this.BRICK_COLS)
 	this.BRICK_ROWS = this.BRICK_ROWS + 1
 	this.brickMove = this.brickMove - this.BRICK_H 
@@ -632,5 +749,6 @@ canvas{
 }
 .absolute{
 	position: absolute;
-}
+} 
+
 </style>
