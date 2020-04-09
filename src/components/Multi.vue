@@ -10,7 +10,7 @@
 		</canvas>
 		<div class="white--text justify-left scoreboard" v-if="gameActive">
 			<v-card class="transparent white--text text--center" width="15%">
-				<v-card-title class="title">score: {{brickHitCount}}</v-card-title>
+				<v-card-title class="title">score: {{brickHitCount }}</v-card-title>
 			</v-card>
 		</div>
 		<v-layout column align-center v-if="gameActive">
@@ -22,47 +22,34 @@
 						CLEARED!
 					</v-card-title>
 				</v-row>
-
 				<v-row class="ma-0 text-center ">
-					<v-col>
+					<v-col v-for="stat in stats" :key="stat.index" >
 						<v-card-text class="pb-0">
-							HITS
+							{{stat.stat}}
 						</v-card-text>
 						<v-card-text class="pt-1 title">
-							{{brickHitCount}}
-						</v-card-text>
-					</v-col>
-					<v-col>
-						<v-card-text class="pb-0">
-							DESTROYED 
-						</v-card-text>
-						<v-card-text class="pt-1 title">
-							{{brickDestoryedCount}} 
-						</v-card-text>
-					</v-col>
-					<v-col>
-						<v-card-text class="pb-0">
-							TIME 
-						</v-card-text>
-						<v-card-text class="pt-1 title">
-							{{tenMinutes}}{{minutes}}:{{tenSeconds}}{{seconds}} 
+							{{stat.count}}
 						</v-card-text>
 					</v-col>
 				</v-row>
-
 				<v-row class="ma-0 text-center justify-center">
-					<v-col class="pt-0 text-center justify-center align-center">
-						<v-avatar class="pb-1 mx-2" size="40">
+
+					<v-col class="pt-0 pl-12">
+						<v-avatar tile class="justify-center text-center" size="80">
+							<img class="" src="bronze-3.png" alt="" srcset="">
+						</v-avatar> 
+                      <v-card-text class="pa-0 text-center rome white--text">BRONZE III </v-card-text>
+                      <v-card-text class="pa-0 text-center body-2 grey--text">DIV XI</v-card-text>						
+					</v-col>	
+
+					<v-col class="pt-0 pr-12 text-center justify-center align-center">
+						<div class="align-center">
+						<v-avatar class="pb-1 mx-2" :size="coinSize">
 							<img src="coin.png" alt="" srcset="">
 						</v-avatar>
-							<span class="coins font-weight-light">255</span>							
-					</v-col>
-
-
-					<v-col class="pt-0">
-						<v-card-text class="pb-0 title">
-							RANKING POINTS {{brickDestoryedCount}} 
-						</v-card-text>
+							<span class="title">{{coinCount}}</span>							
+						</div>
+							
 					</v-col>
 				</v-row>
 				</v-card>
@@ -143,6 +130,11 @@
 			{fade:0.01, backgroundFade: 0.5, text: "E", class: "", timer: 100, timerSpeed: 0.5, active: false, ballColor: "red", keyCode: 69, goldBall: true, image: "/ghostBall.png"},
 			{fade:0.01, backgroundFade: 0.5, text: "R", class: "", timer: 100, timerSpeed: 0.05, active: false, ballColor: "yellow", keyCode: 82, starBall: true, image: "/starBall.png"},
 		],
+		stats: [
+			{stat: "HITS", value: 0, count: 0},
+			{stat: "DESTROYED", value: 0, count: 0},
+			{stat: "TIME", value: "", count:0 },
+		],
 
 		
 		brickMove: 0,
@@ -150,7 +142,6 @@
 		brickMoveSpeed: 0.05,
 		gamePause: false,
 		paddleMenuShuffle: false,
-		brickHitCount: 0,
 		damage: 0.1,
 		brickDestoryedCount: 0,
 
@@ -169,7 +160,19 @@
 		seconds: 0,
 		tenSeconds: 0,
 		minutes: 0,
-		tenMinutes:0,
+		tenMinutes: 0,
+
+		//game finish animation
+		secondsBorderCount: 0,
+		secondsCheck: 0,
+
+		coinCount: 0,
+		coinSize: 30,
+
+		//calculate recived coins
+		secondsCount: 0,
+		brickHitCount: 0,
+		coins: 0,
 
 		//vue bs, irrelevant
 		brickAdd: 0,
@@ -221,17 +224,9 @@
 			this.balls[0].Ypos = window.innerHeight/100
 		},
 		timer(){
-			if(this.seconds == 10){
-				this.seconds = 0;
-				this.tenSeconds += 1;
+			if(this.gameActive && !this.dialog){
+			this.secondsCount += 1	
 			}
-			if(this.tenSeconds == 6){
-				this.tenSeconds = 0;
-				this.minutes += 1;
-			}
-
-			if(this.gameActive && this.dialog == false)
-			this.seconds += 1
 		},
 		ballReset(ball){
 			
@@ -285,6 +280,8 @@
 			if(!this.gameActive){
 				this.updateMousePosMenu()
 			}
+			this.gameFinished()
+
 			/*this.brickGrid.forEach(el => {
 				if(this.brickMove > 10000 && el.exists){
 					this.setGameActive(false)
@@ -360,10 +357,9 @@
 			
 			if(ballBrickCol >= 0 && ballBrickCol < this.BRICK_COLS &&
 			ballBrickRow >= 0 && ballBrickRow < this.BRICK_ROWS) {
-
+			this.calculateCoins();
 			let bricksLeft = this.brickGrid.filter(el => el.exists).length
-
-			if(bricksLeft == 0 && this.brickDestoryedCount > 20){
+			if(bricksLeft == 0 && this.stats[1].value > 20){
 				this.dialog = true
 			}//Game finished successfully
 
@@ -372,7 +368,8 @@
 					if(!this.brickHitBall || col !== prevCol){
 					if(el.id > 0){
 						this.brickGrid[brickIndexUnderBall].exists = false
-						this.brickDestoryedCount += 1;
+						this.stats[1].value += 1;
+						this.stats[0].value += 1;
 						this.ballReset(el);
 					}else if(this.ghostBall){
 						this.brickGrid[brickIndexUnderBall].fade -= this.damage;
@@ -380,16 +377,16 @@
 					if(this.brickGrid[brickIndexUnderBall].fade > 0.5){
 						if(this.goldball){
 							this.brickGrid[brickIndexUnderBall].exists = false
-							this.brickDestoryedCount += 1;
-							this.brickHitCount += 5;
+							this.stats[1].value += 1;
+							this.stats[0].value  += 1;
 
 						}else{
 							this.brickGrid[brickIndexUnderBall].fade -= this.damage;
-							this.brickHitCount++;
+							this.stats[0].value ++;
 						}
 					}else{
 						this.brickGrid[brickIndexUnderBall].exists = false
-						this.brickDestoryedCount += 1;
+						this.stats[1].valu += 1;
 					}
 					var bothTestsFailed = true;
 			if(prevBrickCol != ballBrickCol) {
@@ -508,15 +505,27 @@
 		},
 		gameReset(){
 			this.brickReset();
+			this.timerReset();
 			this.brickMove = 0;
 			this.BRICK_ROWS = 7
 			this.blasts.forEach(el => {
 				el.timer = 100
 			});
+			this.secondsCount = 0
 			this.health = 100
 			this.healthBuffer = 100
 			this.brickGrid.length = this.BRICK_COLS * 7
 		},	
+		timerReset(){
+			this.stats[0].count = 0
+			this.stats[1].count = 0
+			this.stats[2].count = 0
+			this.stats[0].value = 0
+			this.stats[1].value = 0
+			this.stats[2].value = "",
+			this.secondsCount = 0
+			this.secondsCheck = 0
+		},
 		keyPress(e){
 				if(e.keyCode == 37){
 					this.keyLeft = true
@@ -694,6 +703,42 @@
 	this.BRICK_ROWS = this.BRICK_ROWS + 1
 	this.brickMove = this.brickMove - this.BRICK_H 
 		},
+		calculateCoins(){
+			let coins = ((this.stats[0].value * 2 + this.stats[1].value * 7)/this.secondsCount)*100
+			this.coins = Math.floor(coins)
+		},
+		gameFinished(){
+			if(this.gameActive && this.dialog){
+				if(this.stats[0].count < this.stats[0].value){
+					this.stats[0].count += 1
+				}
+				if(this.stats[0].count == this.stats[0].value && this.stats[1].count < this.stats[1].value){
+					this.stats[1].count += 1
+				}
+				if(this.stats[1].count == this.stats[1].value && this.secondsCheck < this.secondsCount){
+					if(this.seconds == 10){
+						this.seconds = 0;
+						this.tenSeconds += 1;
+					}
+					if(this.tenSeconds == 6){
+						this.tenSeconds = 0;
+						this.minutes += 1;
+					}
+						this.seconds += 1
+						this.secondsCheck += 1
+					if(this.minutes == 0){
+						this.stats[2].count = "00" + ":" + this.tenSeconds + this.seconds		
+					}else{
+						this.stats[2].count = "0" + this.minutes + ":" + this.tenSeconds + this.seconds
+					}				
+										
+				}
+				if(this.secondsCheck == this.secondsCount && this.coinCount < this.coins){
+					this.coinCount++
+				}
+
+			}
+		}
 	},
 	computed: mapGetters(['gameActive'])
 	}
@@ -750,5 +795,8 @@ canvas{
 .absolute{
 	position: absolute;
 } 
+.rome { 
+	font-family: TimesNewRoman,Times New Roman,Times,Baskerville,Georgia,serif; 
+}
 
 </style>
