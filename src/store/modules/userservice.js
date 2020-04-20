@@ -3,13 +3,15 @@ import axios from 'axios';
 const state = {
     userdata: [],
     loginResponse: null,
-    gameActive: false
+    gameActive: false,
+    refreshData: true
   };
   
   const getters = {
     allUserdata: state => state.userdata,
     loginResponse: state => state.response,
-    gameActive: state => state.gameActive
+    gameActive: state => state.gameActive,
+    refreshData: state => state.refreshData
   };
 
 
@@ -80,13 +82,29 @@ const actions = {
         localStorage.setItem('username', res.data[0].username);
         
   },
+  async insertData({commit}, data){
+    console.log(data.xp)
+    console.log(data.coins)
+      const res = await axios({
+          method: 'post',
+          url: 'http://localhost:3456/updateUserdata',
+          data: {
+            xp: data.xp,
+            coins: data.coins
+          },
+          withCredentials: true
+        });
+        commit('setLoginResponse', res.data);
+         console.log(res)
+  },
   
 };
 
 const mutations = {
   setUserdata: (state, userdata) => (state.userdata = userdata),
   setLoginResponse: (state, response) => (state.loginResponse = response),
-  setGameActive: (state, bool) => (state.gameActive = bool)
+  setGameActive: (state, bool) => (state.gameActive = bool),
+  setRefreshData: (state, bool) => (state.refreshData = bool)
 };
 
 export default {

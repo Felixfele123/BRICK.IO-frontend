@@ -48,7 +48,7 @@
 
 <script>
 import Navbar from '@/components/Navbar.vue'
-import {mapActions} from "vuex"
+import {mapActions, mapMutations} from "vuex"
 import Mainmenu from '@/components/Mainmenu.vue'
   export default {
     components: {Mainmenu, Navbar},
@@ -66,6 +66,7 @@ import Mainmenu from '@/components/Mainmenu.vue'
       emailError: ""
     }),
     methods:{
+      ...mapMutations(["setRefreshData"]),
       ...mapActions(["loginUser", "confLogin", "fetchUserdata"]),
       async login(){
         
@@ -87,7 +88,8 @@ import Mainmenu from '@/components/Mainmenu.vue'
           let myCookie = this.getCookie("vueCheck");
           if(myCookie){
               this.$router.push({ path: '/' })
-              this.fetchUserdata()
+              await this.fetchUserdata()
+              this.setRefreshData(true)
 
           }else{
               this.error = "invalid code"

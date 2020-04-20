@@ -33,25 +33,34 @@
 					</v-col>
 				</v-row>
 				<v-row class="ma-0 text-center justify-center">
-
 					<v-col class="pt-0 pl-12">
 						<v-avatar tile class="justify-center text-center" size="80">
 							<img class="" src="bronze-3.png" alt="" srcset="">
 						</v-avatar> 
                       <v-card-text class="pa-0 text-center rome white--text">BRONZE III </v-card-text>
-                      <v-card-text class="pa-0 text-center body-2 grey--text">DIV XI</v-card-text>						
+                      <v-card-text class="pa-0 text-center rome grey--text">DIV XI</v-card-text>						
 					</v-col>	
-
-					<v-col class="pt-0 pr-12 text-center justify-center align-center">
-						<div class="align-center">
-						<v-avatar class="pb-1 mx-2" :size="coinSize">
+					<v-col class="pt-0 pr-12 justify-center align-center ">
+						<div class="align-center  text-center">
+						<v-avatar class="pb-1 mx-2 my-3" :size="coinSize">
 							<img src="coin.png" alt="" srcset="">
 						</v-avatar>
 							<span class="title">{{coinCount}}</span>							
 						</div>
-							
+						<div class="align-center  text-center">
+						<v-avatar class="pb-1 mx-2 my-3" :size="coinSize">
+							<img src="coin.png" alt="" srcset="">
+						</v-avatar>
+							<span class="title">{{xp}}</span>							
+						</div>
+													
 					</v-col>
 				</v-row>
+				<div class="py-3">
+				<v-form class="mb-8 text-center">
+					<v-btn @click="continueToNextLevel()">Continue</v-btn>
+				</v-form>	
+				</div>
 				</v-card>
 				</v-dialog>
 			</div>
@@ -76,7 +85,7 @@
 </template>
 
 <script>
-	import {mapGetters, mapMutations} from "vuex"
+	import {mapGetters, mapMutations, mapActions} from "vuex"
     export default {
     name: 'Multi',
     data: () => ({
@@ -118,9 +127,10 @@
 		ghostBall: false,
 		ballStorage: [
 			{id: 0, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: -window.innerWidth/300, Yspeed: -window.innerHeight/250, radius: window.innerHeight/100, color: "white", reflect: true, active: true},
-			{id: 1, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false},
-			{id: 2, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false},
-			{id: 3, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false},
+			{id: 1, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false, bullet: true},
+			{id: 2, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false, bullet: true},
+			{id: 3, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false, bullet: true},
+			{id: 4, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: true, active: false},
 		],
 		balls: [],
 //blast
@@ -148,13 +158,14 @@
 		healthBackgroundColor: 'black',
 		healthBuffer: 100,
 		health: 100,
-		mana: 70,
 		brickAddCount: 0,
 		dialog: false,
 
 		keyLeft: false,
 		keyRight: false,
 		keyDirection: 1,
+
+		xp: 0,
 
 		//gameplay timer
 		seconds: 0,
@@ -163,9 +174,7 @@
 		tenMinutes: 0,
 
 		//game finish animation
-		secondsBorderCount: 0,
 		secondsCheck: 0,
-
 		coinCount: 0,
 		coinSize: 30,
 
@@ -205,7 +214,8 @@
 	this.brickReset();
 	},
 	methods: {
-		...mapMutations(["setGameActive"]),
+		...mapMutations(["setGameActive", "setRefreshData"]),
+		...mapActions(["insertData", "fetchUserdata"]),
 		resize(){
 			this.canvas.width = window.innerWidth;
 			this.canvas.height = window.innerHeight;
@@ -366,7 +376,7 @@
 				if(this.brickGrid[brickIndexUnderBall].exists) {
 
 					if(!this.brickHitBall || col !== prevCol){
-					if(el.id > 0){
+					if(el.bullet){
 						this.brickGrid[brickIndexUnderBall].exists = false
 						this.stats[1].value += 1;
 						this.stats[0].value += 1;
@@ -503,6 +513,14 @@
 			this.canvasContext.arc(centerX,centerY, radius, 0,Math.PI*2, true);
 			this.canvasContext.fill();
 		},
+		async continueToNextLevel(){
+			this.setGameActive(false)
+			this.dialog = false;
+			let data = {xp: this.xp, coins: this.coinCount}
+			await this.insertData(data)
+			this.setRefreshData(true)
+			this.gameReset()
+		},
 		gameReset(){
 			this.brickReset();
 			this.timerReset();
@@ -515,6 +533,12 @@
 			this.health = 100
 			this.healthBuffer = 100
 			this.brickGrid.length = this.BRICK_COLS * 7
+			this.coinCount = 0
+			this.coins = 0
+			this.seconds = 0
+			this.tenSeconds = 0
+			this.minutes = 0
+			
 		},	
 		timerReset(){
 			this.stats[0].count = 0
@@ -523,7 +547,6 @@
 			this.stats[0].value = 0
 			this.stats[1].value = 0
 			this.stats[2].value = "",
-			this.secondsCount = 0
 			this.secondsCheck = 0
 		},
 		keyPress(e){
@@ -575,13 +598,23 @@
 					el.backgroundFade = 0.5
 					//speedball
 						if(el.speedBall){
-							this.balls[0].Yspeed = this.balls[0].Yspeed*3
+							this.ballStorage.forEach(el => {
+								if(el.id == 4){
+									el.Xpos = this.paddleX + this.PADDLE_WIDTH/2
+									el.Ypos = this.canvas.height-this.PADDLE_DIST_FROM_EDGE-10
+									el.Xspeed = 0;
+									el.Yspeed =  -(window.innerHeight/250)
+									this.balls.push(el)
+								}
+							});
+							
+							/*this.balls[0].Yspeed = this.balls[0].Yspeed*3
 							this.balls[0].Xspeed = this.balls[0].Xspeed*3
 							el.timer = 100;
 								setTimeout(() => {
 									this.balls[0].Yspeed = this.balls[0].Yspeed/3
 									this.balls[0].Xspeed = this.balls[0].Xspeed/3
-								}, 250);
+								}, 250);*/
 						}
 						//ghostball
 						if(el.goldBall){
@@ -700,12 +733,13 @@
 				}				
 		}
 	//this.brickGrid.splice((this.BRICK_ROWS)*this.BRICK_COLS, this.BRICK_COLS)
-	this.BRICK_ROWS = this.BRICK_ROWS + 1
-	this.brickMove = this.brickMove - this.BRICK_H 
+			this.BRICK_ROWS = this.BRICK_ROWS + 1
+			this.brickMove = this.brickMove - this.BRICK_H 
 		},
 		calculateCoins(){
-			let coins = ((this.stats[0].value * 2 + this.stats[1].value * 7)/this.secondsCount)*100
+			let coins = ((this.stats[0].value * 2 + this.stats[1].value * 7)/this.secondsCount)*20
 			this.coins = Math.floor(coins)
+			this.xp = this.stats[0].value * this.stats[1].value
 		},
 		gameFinished(){
 			if(this.gameActive && this.dialog){
@@ -716,6 +750,9 @@
 					this.stats[1].count += 1
 				}
 				if(this.stats[1].count == this.stats[1].value && this.secondsCheck < this.secondsCount){
+					this.seconds += 1
+					this.secondsCheck += 1
+
 					if(this.seconds == 10){
 						this.seconds = 0;
 						this.tenSeconds += 1;
@@ -724,8 +761,6 @@
 						this.tenSeconds = 0;
 						this.minutes += 1;
 					}
-						this.seconds += 1
-						this.secondsCheck += 1
 					if(this.minutes == 0){
 						this.stats[2].count = "00" + ":" + this.tenSeconds + this.seconds		
 					}else{

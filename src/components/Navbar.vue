@@ -10,13 +10,30 @@
 
           </v-toolbar-title>
         </v-flex>
-        <v-flex lg5 class="text-right">
+        <v-flex lg5 class="text-right mt-3">
             <span class="font-weight-light">{{allUserdata[0].username}}</span>
             <v-avatar size="30" class="mx-5">
               <img src="bronze-3.png" alt="" srcset="">
             </v-avatar>
-            <span class="font-weight-lighte title">  {{allUserdata[0].level}} </span>
         </v-flex>
+        <v-col @click="log()"           
+          xs="2"
+          sm="3"
+          md="3"
+          lg="2">
+							<v-row>
+							<p class="ml-5 caption grey--text  mb-0"> Level {{allUserdata[0].level}}</p>
+							<v-row class="align-center justify-end">
+							<p class=" text-md-right mb-0 mx-2"> {{allUserdata[0].coins}} </p>
+							<v-avatar tile class="justify-center align-center text-center mr-6" size="20">
+								<img class="" src="coin.png" alt="" srcset="">
+							</v-avatar> 								
+							</v-row>
+							</v-row>
+							<v-progress-linear rounded class="mt-0" :value="xpBarValue" color="amber" height="24" reactive>
+								<div class="xp-text ml-6 black--text"><strong> {{allUserdata[0].xp}} / {{xpTop}} xp </strong></div>	
+							</v-progress-linear>          
+        </v-col>
 
          
       <v-spacer></v-spacer>
@@ -31,24 +48,19 @@
         </router-link>
       </v-btn>
     </v-app-bar>
-
 </template>
 
 
 <script>
 import logoutService from '../logoutService.js'
-import {mapGetters, mapActions} from "vuex"
+import {mapGetters, mapActions, mapMutations} from "vuex"
 export default {
 
   name: 'Navbar',
-  mounted() {
-      this.fetchUserdata()
-      this.brick_email = this.allUserdata[0].email
-      this.brick_username = this.allUserdata[0].username
-      this.brick_level = this.allUserdata[0].level
-      this.brick_rank =  this.allUserdata[0].rank
-      this.cookieExists();
-    },
+  created(){
+
+  },
+
   data: () => ({
       /*brick_email: allUserdata.email,
       brick_rank: allUserdata.rank,
@@ -58,24 +70,56 @@ export default {
       brick_username: null,
       brick_level: null,
       brick_rank: null,
+      buffer_value: 100,
+      xp: 60,
+      level: 1,
+      xpTop: 1000,
+      xpLevel:0,
+      xpBarValue: 0,
+      bool: true
 
   }),
+    mounted() {
+  
+  setInterval(this.updateAll, 500)
+    },
   methods: {
+      ...mapMutations(["setRefreshData"]),
       ...mapActions(["fetchUserdata"]),
       logOut(){
+
         localStorage.removeItem("email");
         localStorage.removeItem("level");
         localStorage.removeItem("rank");
         document.cookie = "token=null";
         this.allUserdata.username = "";
-        this.allUserdata.level = "";
+        this.allUserdata.xp = "";
         this.allUserdata.email = "";
         this.delete_cookie("vueCheck");
         this.$router.push({ path: '/login' })
         logoutService.logout();
 
-        console.log(this.allUserdata)
+      },
+      log(){
+        console.log(this.refreshData)
+        this.calculateExtra()
+      },
+      async updateAll(){
+        if(this.refreshData){
+        await this.fetchUserdata()
+        this.calculateExtra()
+        this.cookieExists();
+        this.setRefreshData(false) 
+        console.log("REFRESHED!!")
+        }
+        
 
+      },
+      calculateExtra(){
+        let potens = this.allUserdata[0].level - 1
+        this.xpTop = Math.floor(Math.pow(1.3, potens) * 1000)
+        this.xpBarValue = 100/this.xpTop*this.allUserdata[0].xp
+        console.log("ja den körs!!!")
       },
       delete_cookie( name ) {
         document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
@@ -110,7 +154,7 @@ export default {
     return decodeURI(dc.substring(begin + prefix.length, this.end));
 },
   },
-  computed: mapGetters(["allUserdata"]),
+  computed: mapGetters(["allUserdata", "refreshData"]),
   
 
       
@@ -120,5 +164,9 @@ export default {
 <style scoped>
 a{
   text-decoration: none !important;
+}
+.xp-text{
+  text-decoration: none !important;
+  opacity: 0.7;
 }
 </style>
