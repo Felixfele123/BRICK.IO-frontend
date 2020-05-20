@@ -11,7 +11,7 @@
           </v-toolbar-title>
         </v-flex>
         <v-flex lg5 class="text-right mt-3">
-            <span class="font-weight-light">{{allUserdata[0].username}}</span>
+            <span class="font-weight-light">{{username}}</span>
             <v-avatar size="30" class="mx-5">
               <img src="bronze-3.png" alt="" srcset="">
             </v-avatar>
@@ -22,17 +22,17 @@
           md="3"
           lg="2">
 							<v-row>
-							<p class="ml-5 caption grey--text  mb-0"> Level {{allUserdata[0].level}}</p>
-							<v-row class="align-center justify-end">
-							<p class=" text-md-right mb-0 mx-2"> {{allUserdata[0].coins}} </p>
-							<v-avatar tile class="justify-center align-center text-center mr-6" size="20">
-								<img class="" src="coin.png" alt="" srcset="">
-							</v-avatar> 								
+							<p class="ml-5 caption grey--text  mb-0"> Level {{level}}</p>
+                <v-row class="align-center justify-end">
+                <p class=" text-md-right mb-0 mx-2"> {{coins}} </p>
+                <v-avatar tile class="justify-center align-center text-center mr-6" size="20">
+                  <img class="" src="coin.png" alt="" srcset="">
+                </v-avatar> 								
+                </v-row>
 							</v-row>
-							</v-row>
-							<v-progress-linear rounded class="mt-0" :value="xpBarValue" color="amber" height="24" reactive>
-								<div class="xp-text ml-6 black--text"><strong> {{allUserdata[0].xp}} / {{xpTop}} xp </strong></div>	
-							</v-progress-linear>          
+              <v-progress-linear rounded class="mt-0" :value="xpBarValue" color="amber" height="24" reactive>
+              <div class="xp-text ml-6 black--text"><strong> {{xp}} / {{xpTop}} xp </strong></div>	
+              </v-progress-linear>          
         </v-col>
 
          
@@ -67,11 +67,11 @@ export default {
       brick_level: allUserdata.level,*/
       isLoggedIn: Boolean,
       brick_email: null,
-      brick_username: null,
-      brick_level: null,
-      brick_rank: null,
+      username: 'Guest',
+      rank: null,
       buffer_value: 100,
-      xp: 60,
+      coins: 0,
+      xp: 0,
       level: 1,
       xpTop: 1000,
       xpLevel:0,
@@ -80,8 +80,7 @@ export default {
 
   }),
     mounted() {
-  
-  setInterval(this.updateAll, 500)
+      setInterval(this.updateAll, 500)
     },
   methods: {
       ...mapMutations(["setRefreshData"]),
@@ -92,16 +91,13 @@ export default {
         localStorage.removeItem("level");
         localStorage.removeItem("rank");
         document.cookie = "token=null";
-        this.allUserdata.username = "";
-        this.allUserdata.xp = "";
-        this.allUserdata.email = "";
         this.delete_cookie("vueCheck");
         this.$router.push({ path: '/login' })
         logoutService.logout();
-
       },
-      log(){
+      async log(){
         console.log(this.refreshData)
+        await this.fetchUserdata()
         this.calculateExtra()
       },
       async updateAll(){
@@ -110,7 +106,11 @@ export default {
         this.calculateExtra()
         this.cookieExists();
         this.setRefreshData(false) 
-        console.log("REFRESHED!!")
+        this.username = this.allUserdata[0].username
+        this.level = this.allUserdata[0].level
+        this.xp = this.allUserdata[0].xp
+        this.coins = this.allUserdata[0].coins
+        console.log("refereshed!")
         }
         
 
@@ -119,7 +119,6 @@ export default {
         let potens = this.allUserdata[0].level - 1
         this.xpTop = Math.floor(Math.pow(1.3, potens) * 1000)
         this.xpBarValue = 100/this.xpTop*this.allUserdata[0].xp
-        console.log("ja den körs!!!")
       },
       delete_cookie( name ) {
         document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';

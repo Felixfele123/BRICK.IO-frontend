@@ -28,7 +28,6 @@ const actions = {
       console.log(response.data) 
 },
 //Login request from cliens
-
   async loginUser({commit}, userEmail){
     const res = await axios({
           method: 'post',
@@ -40,7 +39,6 @@ const actions = {
         });
         console.log(userEmail)
         commit('setLoginResponse', res.data);
-        
   },
   async confLogin({commit}, code){
       const res = await axios({
@@ -68,7 +66,6 @@ const actions = {
         console.log(res)
         commit('setLoginResponse', res.data);
   },
-
   async confReg({commit}, code){
       const res = await axios({
           method: 'post',
@@ -80,7 +77,6 @@ const actions = {
         });
         commit('setLoginResponse', res.data);
         localStorage.setItem('username', res.data[0].username);
-        
   },
   async insertData({commit}, data){
     console.log(data.xp)
@@ -97,7 +93,6 @@ const actions = {
         commit('setLoginResponse', res.data);
          console.log(res)
   },
-  
 };
 
 const mutations = {
@@ -106,7 +101,6 @@ const mutations = {
   setGameActive: (state, bool) => (state.gameActive = bool),
   setRefreshData: (state, bool) => (state.refreshData = bool)
 };
-
 export default {
     state,
     getters,

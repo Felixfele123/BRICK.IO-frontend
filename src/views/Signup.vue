@@ -49,8 +49,8 @@
 
 <script>
 import Mainmenu from '@/components/Mainmenu.vue'
+import {mapActions, mapMutations} from "vuex"
 import Navbar from '@/components/Navbar.vue'
-import {mapActions} from "vuex"
   export default {
     components: { Mainmenu, Navbar},
     name: 'home',
@@ -79,7 +79,8 @@ import {mapActions} from "vuex"
       error: null
     }),
     methods:{
-       ...mapActions(["regUser", "confReg"]),
+       ...mapMutations(["setRefreshData"]),
+       ...mapActions(["regUser", "confReg", "fetchUserdata"]),
       async login(){
 
         let userdata = {email: this.email, username: this.username}
@@ -95,12 +96,13 @@ import {mapActions} from "vuex"
     }
 },
       async confirmIdentity(){
-
           await this.confReg(this.code)
-
           let myCookie = this.getCookie("vueCheck");
           if(myCookie){
               this.$router.push({ path: '/' })
+              await this.fetchUserdata()
+              this.setRefreshData(true)
+
           }else{
               this.error = "invalid code"
           }

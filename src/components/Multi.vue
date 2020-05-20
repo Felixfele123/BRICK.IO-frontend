@@ -1,19 +1,32 @@
 
 <template>
 	<v-container class="justify-center pa-0"  fluid fill-height>
-		<v-card @click="setGameActive(true)" v-if="!gameActive" class="transparent justify-center align-center text-center">
+		<v-card @click.prevent="joinGameLobby" v-if="!gameActive && !gameRequest" class="transparent justify-center align-center text-center">
 			<v-card-title class="white--text display-4 level">Level 1</v-card-title>
 			<span class="blink">Click to play</span>
-
 		</v-card>
 		<canvas id="gameCanvas">
 		</canvas>
 		<div class="white--text justify-left scoreboard" v-if="gameActive">
-			<v-card class="transparent white--text text--center" width="15%">
-				<v-card-title class="title">score: {{brickHitCount }}</v-card-title>
+			<v-card class="transparent white--text text--center" width="12%">
+				<v-card-title class="title">SCORE</v-card-title>
+				<v-card-text class="white--text pb-0">
+				<p style="text-align:left; "> white <span style="float:right;">{{balls[0].score}} </span> </p>
+				</v-card-text>
+				<v-card-text class="red--text pb-0">
+				<p style="text-align:left; "> red <span style="float:right;">{{balls[1].score}} </span> </p>
+				</v-card-text>
+				<v-card-text class="blue--text pb-0">
+				<p style="text-align:left; "> blue <span style="float:right;">{{balls[2].score}} </span> </p>
+				</v-card-text>
+				<v-card-text class="green--text pb-0">
+				<p style="text-align:left; "> green <span style="float:right;">{{balls[3].score}} </span> </p>
+				</v-card-text>
+
+
 			</v-card>
 		</div>
-		<v-layout column align-center v-if="gameActive">
+		<v-layout column justify-center align-center v-if="gameActive || gameRequest" class="relative">
 			<div class="text-center justify-center">
 				<v-dialog dark v-model="dialog" width="500">
 				<v-card class="justify-center">
@@ -53,14 +66,25 @@
 						</v-avatar>
 							<span class="title">{{xp}}</span>							
 						</div>
-													
 					</v-col>
 				</v-row>
 				<div class="py-3">
-				<v-form class="mb-8 text-center">
+				<v-form class="mb-8 text-center ">
 					<v-btn @click="continueToNextLevel()">Continue</v-btn>
 				</v-form>	
 				</div>
+				</v-card>
+				<v-card v-if="gameRequest" class="justify-center">
+					<v-card-title disabled class="headline white--text justify-center align-center">searching for other players..</v-card-title>
+					<v-row class="ma-0 text-center justify-center">
+						<v-col :class="`playerSearch mx-2 ${player.class}`" v-for="player in players" :key="player.id">
+						</v-col>
+					</v-row>
+                <v-layout class="justify-center py-4">
+                  <v-form class="px-3 justify-center">
+                    <v-btn color="white" class="black--text justify-center" @click="cancelRequest()">CANCEL</v-btn>
+                  </v-form> 
+                </v-layout>
 				</v-card>
 				</v-dialog>
 			</div>
@@ -85,12 +109,15 @@
 </template>
 
 <script>
-	import {mapGetters, mapMutations, mapActions} from "vuex"
+	import {mapGetters, mapMutations, mapActions} from "vuex";
+	import io from 'socket.io-client';
+	import { throttle } from 'throttle-debounce';
     export default {
     name: 'Multi',
     data: () => ({
         canvas: null, 
 		canvasContext: null,
+		socket: io('localhost:3456'),
 
 
 		PADDLE_WIDTH: window.innerWidth/15,
@@ -123,14 +150,17 @@
 		ballY: window.innerHeight/3,
 		ballSpeedX: window.innerWidth/300,
 		ballSpeedY: window.innerWidth/300,
-		newBallCount: 1,
+		newBallCount: 4,
 		ghostBall: false,
 		ballStorage: [
-			{id: 0, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: -window.innerWidth/300, Yspeed: -window.innerHeight/250, radius: window.innerHeight/100, color: "white", reflect: true, active: true},
-			{id: 1, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false, bullet: true},
-			{id: 2, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false, bullet: true},
-			{id: 3, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false, bullet: true},
-			{id: 4, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: true, active: false},
+			{id: 0, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: -window.innerWidth/300, Yspeed: -window.innerHeight/250, radius: window.innerHeight/200, color: "white", reflect: true, active: true, score: 0},
+			{id: 1, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: -window.innerWidth/600, Yspeed: -window.innerHeight/500, radius: window.innerHeight/200, color: "red", reflect: true, active: true, score: 0},
+			{id: 2, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: -window.innerWidth/1200, Yspeed: -window.innerHeight/1000, radius: window.innerHeight/200, color: "blue", reflect: true, active: true, score: 0},
+			{id: 3, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: -window.innerWidth/2400, Yspeed: -window.innerHeight/2000, radius: window.innerHeight/200, color: "green", reflect: true, active: true, score: 0},
+			{id: 4, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false, bullet: true},
+			{id: 5, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false, bullet: true},
+			{id: 6, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: false, active: false, bullet: true},
+			{id: 7, Xpos: window.innerWidth/2, Ypos: window.innerHeight/3, Xspeed: 0, Yspeed: -(window.innerHeight/250), radius: window.innerHeight/200, color: "white", reflect: true, active: false},
 		],
 		balls: [],
 //blast
@@ -146,6 +176,12 @@
 			{stat: "TIME", value: "", count:0 },
 		],
 
+		players: [
+			{id: 0, paddleX: window.innerWidth/2, color: 'white', class: "", score: 0},
+			{id: 1, paddleX: window.innerWidth/2, color: 'red', class: "", score: 0},
+			{id: 2, paddleX: window.innerWidth/2, color: 'blue', class: "", score: 0},
+			{id: 3, paddleX: window.innerWidth/2, color: 'green', class: "", score: 0}
+			],
 		
 		brickMove: 0,
 		brickHitBall: false,
@@ -166,6 +202,8 @@
 		keyDirection: 1,
 
 		xp: 0,
+		gameRequest: false,
+		scoreboard: false,
 
 		//gameplay timer
 		seconds: 0,
@@ -183,16 +221,20 @@
 		brickHitCount: 0,
 		coins: 0,
 
+		userID: "",
+		playerID: null,
 		//vue bs, irrelevant
 		brickAdd: 0,
 	}),
 	created() {
 	window.addEventListener("resize", this.resize);
 	},
-    mounted(){
+    async mounted(){
     this.canvas = document.getElementById('gameCanvas');
 	this.canvasContext = this.canvas.getContext('2d');
 	
+	await this.fetchUserdata();
+	this.userID = this.allUserdata[0].username
 	let framesPerSecond = 100;
 
 	setInterval(this.updateAll, 1000/framesPerSecond)
@@ -202,7 +244,35 @@
     this.canvas.width = window.innerWidth;
 	this.canvas.height = window.innerHeight;
 	this.canvas.addEventListener('mousemove', this.updateMousePos);
-	
+
+	this.socket.on("SESSION_ID", data => {
+		if(data > 2){
+			setTimeout(() => {
+				this.startGame()
+			},1000)
+		}
+		if(this.gameRequest){
+			this.playerID = data
+		}
+			this.players[data].class = ''
+			if(this.players[data+1]){
+			this.players[data+1].class = 'blink_me'	
+			}
+			if(this.players[data+2]){
+			this.players[data+2].class = 'blink_me'	
+			}
+			if(this.players[data+3]){
+			this.players[data+3].class = 'blink_me'	
+			}
+	console.log('g')
+	});
+	this.socket.on("MOUSEPOS", data => {
+		this.players[data.playerID].paddleX = data.brickPosIndex*this.canvas.width - this.PADDLE_WIDTH/2
+	});
+	this.socket.on("GAME_UPDATE", data => {
+		this.processGameUpdate(data)
+		this.initState()
+	});
 	window.addEventListener('keydown', this.keyPress);
 	window.addEventListener('keyup', this.keyUp);
 
@@ -215,7 +285,7 @@
 	},
 	methods: {
 		...mapMutations(["setGameActive", "setRefreshData"]),
-		...mapActions(["insertData", "fetchUserdata"]),
+		...mapActions(["insertData", "fetchUserdata", "processGameUpdate", "initState"]),
 		resize(){
 			this.canvas.width = window.innerWidth;
 			this.canvas.height = window.innerHeight;
@@ -238,9 +308,22 @@
 			this.secondsCount += 1	
 			}
 		},
+		startGame(){
+			this.gameRequest = false
+			this.dialog = false	
+			this.setGameActive(true)
+		},
+		joinGameLobby(e){
+			this.setGameActive(true)
+			//this.dialog = true;
+			//this.gameRequest = true
+			e.preventDefault();
+			this.socket.emit('SEND_GAMEREQUEST', {
+				userID: this.userID
+			});
+		},
 		ballReset(ball){
-			
-			if(ball.id <= 0){
+			if(ball.id <= 3){
 					ball.Xpos = this.canvas.width/2
 					ball.Ypos = this.canvas.height/2				
 			}else{
@@ -287,9 +370,7 @@
 		updateAll(){
 			this.moveAll()
 			this.drawAll()
-			if(!this.gameActive){
-				this.updateMousePosMenu()
-			}
+			this.updateMousePosMenu()
 			this.gameFinished()
 
 			/*this.brickGrid.forEach(el => {
@@ -299,6 +380,15 @@
 				
 			});*/
 		},
+		handleInput(dir){
+			throttle(20, 
+				this.socket.emit('SEND_MOUSEPOS', dir));
+		},
+		sendMousePos(e){
+			e.preventDefault();
+			let brickPosIndex = this.mouseX/this.canvas.width;
+			this.handleInput(brickPosIndex)
+        },
 		updateMousePos(evt){
 			if(this.gameActive){
 			let rect = this.canvas.getBoundingClientRect();
@@ -312,15 +402,22 @@
 			this.balls[0].Xspeed = -window.innerWidth/300,
 			this.balls[0].Yspeed = -window.innerHeight/250*/
 			
-			this.paddleX = this.mouseX - this.PADDLE_WIDTH/2	
+			//this.players[this.playerID].paddleX = this.mouseX - this.PADDLE_WIDTH/2				
+			//this.sendMousePos(evt)
+			this.players[0].paddleX = this.mouseX - this.PADDLE_WIDTH/2
 			}
 		},
 		updateMousePosMenu(){
-				if(this.paddleMenuShuffle){
-					this.paddleX = this.balls[0].Xpos - this.PADDLE_WIDTH/1.3;
-				}else{
-					this.paddleX = this.balls[0].Xpos - this.PADDLE_WIDTH/1.2;
+			this.players.forEach(player => {
+				if(player.id > 0){
+					if(this.paddleMenuShuffle){
+						player.paddleX = this.balls[player.id].Xpos - this.PADDLE_WIDTH/1.3;
+					}else{
+						player.paddleX = this.balls[player.id].Xpos - this.PADDLE_WIDTH/1.2;
+					}	
 				}
+								
+			});
 		},
 		ballMove(){
 			this.balls.forEach(ball => {
@@ -340,7 +437,6 @@
 				ball.Yspeed *= -1
 			}
 			});
-
 		},
 		isBrickAtColRow(col, row) {
 			if(col >= 0 && col < this.BRICK_COLS &&
@@ -368,10 +464,10 @@
 			if(ballBrickCol >= 0 && ballBrickCol < this.BRICK_COLS &&
 			ballBrickRow >= 0 && ballBrickRow < this.BRICK_ROWS) {
 			this.calculateCoins();
-			let bricksLeft = this.brickGrid.filter(el => el.exists).length
-			if(bricksLeft == 0 && this.stats[1].value > 20){
-				this.dialog = true
-			}//Game finished successfully
+			if(el.score >= 50){
+				this.dialog = true;
+			}
+			//Game finished successfully
 
 				if(this.brickGrid[brickIndexUnderBall].exists) {
 
@@ -380,6 +476,7 @@
 						this.brickGrid[brickIndexUnderBall].exists = false
 						this.stats[1].value += 1;
 						this.stats[0].value += 1;
+						this.balls[el.id].score++;
 						this.ballReset(el);
 					}else if(this.ghostBall){
 						this.brickGrid[brickIndexUnderBall].fade -= this.damage;
@@ -389,14 +486,17 @@
 							this.brickGrid[brickIndexUnderBall].exists = false
 							this.stats[1].value += 1;
 							this.stats[0].value  += 1;
+							this.balls[el.id].score++;
 
 						}else{
 							this.brickGrid[brickIndexUnderBall].fade -= this.damage;
 							this.stats[0].value ++;
+							this.balls[el.id].score++;
 						}
 					}else{
 						this.brickGrid[brickIndexUnderBall].exists = false
-						this.stats[1].valu += 1;
+						this.stats[1].value += 1;
+						this.balls[el.id].score++;
 					}
 					var bothTestsFailed = true;
 			if(prevBrickCol != ballBrickCol) {
@@ -427,23 +527,26 @@
 		},
 
 		ballPaddleHandling(){
+			this.players.forEach(el => {
 			let paddleTopEdgeY = this.canvas.height-this.PADDLE_DIST_FROM_EDGE;
 			let paddleBottomEdgeY = paddleTopEdgeY + this.PADDLE_THICKNESS;
-			let paddleLeftEdgeX = this.paddleX;
+			let paddleLeftEdgeX = el.paddleX;
 			let paddleRightEdgeX = paddleLeftEdgeX + this.PADDLE_WIDTH;
 
 			this.balls.forEach(ball => {
 				if( ball.Ypos > paddleTopEdgeY - ball.radius && // below the top of paddle
 					ball.Ypos < paddleBottomEdgeY && // above bottom of paddle
 					ball.Xpos > paddleLeftEdgeX && // right of the left side of paddle
-					ball.Xpos < paddleRightEdgeX ) { // left of the left side of paddle
+					ball.Xpos < paddleRightEdgeX &&
+					ball.id == el.id) { // left of the left side of paddle
 					
 					ball.Yspeed *= -1;
-					let centerOfPaddleX = this.paddleX+this.PADDLE_WIDTH/2;
+					let centerOfPaddleX = el.paddleX+this.PADDLE_WIDTH/2;
 					let ballDistFromPaddleCenterX = ball.Xpos - centerOfPaddleX;
 					ball.Xspeed = ballDistFromPaddleCenterX * 0.08;
 					this.paddleMenuShuffle = !this.paddleMenuShuffle
 					}				
+				});				
 			});
 		},
 		moveAll(){
@@ -493,10 +596,16 @@
 					this.colorCircle(ball.Xpos,ball.Ypos,ball.radius,ball.color);
 			});
 
-			this.canvasContext.fillStyle = 'white';
 			
-			this.canvasContext.fillRect(this.paddleX, this.canvas.height-this.PADDLE_DIST_FROM_EDGE,
-				this.PADDLE_WIDTH, this.PADDLE_THICKNESS);
+			
+			this.players.forEach(player => {
+			
+			this.canvasContext.fillStyle = player.color;
+
+			this.canvasContext.fillRect(player.paddleX, this.canvas.height-this.PADDLE_DIST_FROM_EDGE,
+				this.PADDLE_WIDTH, this.PADDLE_THICKNESS);				
+			});
+
 
 			this.colorText(this.mouseX+","+this.mouseY, this.mouseX, this.mouseY, 'yellow')
 			if(this.gameActive){
@@ -538,6 +647,9 @@
 			this.seconds = 0
 			this.tenSeconds = 0
 			this.minutes = 0
+			this.balls.forEach(el => {
+				el.score = 0;
+			});
 			
 		},	
 		timerReset(){
@@ -549,6 +661,12 @@
 			this.stats[2].value = "",
 			this.secondsCheck = 0
 		},
+		leaveGame(){
+				this.socket.emit('LEAVE_MATCH', {
+					userID: this.userID
+				});
+				this.setGameActive(false)
+		},
 		keyPress(e){
 				if(e.keyCode == 37){
 					this.keyLeft = true
@@ -556,19 +674,30 @@
 				}
 				if(e.keyCode == 67){
 					this.dialog = true
+					this.scoreboard = true
 				}
 				if(e.keyCode == 39){
 					this.keyRight = true
 					this.keyDirection = 1
+					console.log(this.allUserdata.username)
 				}
 				if(e.keyCode == 27){
-					this.setGameActive(false)
+					this.leaveGame()
 				}
 				if(e.keyCode == 32){
 					this.balls[0].Yspeed *= -1;
+					console.log(this.gameActive)
 				}
 				if(e.keyCode == 66){
 					this.gameReset()
+				}
+				if(e.keyCode == 90){
+					if(this.userID <= 2){
+					this.userID++	
+					}else{
+						this.userID = 0
+					}
+					
 				}
 				this.blast(e)
 
@@ -599,7 +728,7 @@
 					//speedball
 						if(el.speedBall){
 							this.ballStorage.forEach(el => {
-								if(el.id == 4){
+								if(el.id > 3){
 									el.Xpos = this.paddleX + this.PADDLE_WIDTH/2
 									el.Ypos = this.canvas.height-this.PADDLE_DIST_FROM_EDGE-10
 									el.Xspeed = 0;
@@ -639,16 +768,16 @@
 							el.counter--;
 							this.ballStorage.forEach(el => {
 								if(el.id == this.newBallCount){
-									el.Xpos = this.paddleX + this.PADDLE_WIDTH/2
+									el.Xpos = this.players[0].paddleX + this.PADDLE_WIDTH/2
 									el.Ypos = this.canvas.height-this.PADDLE_DIST_FROM_EDGE-10
 									el.Xspeed = 0;
 									el.Yspeed =  -(window.innerHeight/250)
 									this.balls.push(el)
 								}
 							});
-							if(this.newBallCount >= 3){
+							if(this.newBallCount >= 6){
 								el.timer = 100;
-								this.newBallCount = 1
+								this.newBallCount = 4
 							}else{
 								this.newBallCount++;
 							}
@@ -720,13 +849,8 @@
 						blue = 255
 						red = 0
 					}
-					if((this.brickGrid.length > 0 && this.brickGrid.length < 100) || (this.brickGrid.length > 150 && this.brickGrid.length < 250) || (this.brickGrid.length > 300 && this.brickGrid.length < 400)){
 					let exists = true
 					this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));
-					}else{
-					let exists = false
-					this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));					
-					}
 				}else{
 					let exists = false
 					this.brickGrid.splice(30, 0, new Brick(red, green, blue, fade, exists));
@@ -736,11 +860,15 @@
 			this.BRICK_ROWS = this.BRICK_ROWS + 1
 			this.brickMove = this.brickMove - this.BRICK_H 
 		},
+		cancelRequest(){
+			this.socket.emit('LEAVE_GAME');
+		},
 		calculateCoins(){
 			let coins = ((this.stats[0].value * 2 + this.stats[1].value * 7)/this.secondsCount)*20
 			this.coins = Math.floor(coins)
 			this.xp = this.stats[0].value * this.stats[1].value
 		},
+
 		gameFinished(){
 			if(this.gameActive && this.dialog){
 				if(this.stats[0].count < this.stats[0].value){
@@ -775,7 +903,7 @@
 			}
 		}
 	},
-	computed: mapGetters(['gameActive'])
+	computed: mapGetters(['gameActive', 'allUserdata'])
 	}
 </script>
 <style scoped>
@@ -784,6 +912,9 @@ canvas{
 	z-index: +1;
 	/*cursor: none;*/
 	width: 100%
+}
+.relative{
+	position:relative;
 }
 .container{
 	position: absolute;
@@ -800,11 +931,11 @@ canvas{
 100%{opacity: 1;}
 }
 .blink_me {
-  animation: blinker 1s linear infinite;
+  animation: blinker 1.5s linear infinite;
 }
 @keyframes blinker {
   50% {
-    opacity: 0.5;
+    opacity: 0;
   }
 }
 .level{
@@ -832,6 +963,17 @@ canvas{
 } 
 .rome { 
 	font-family: TimesNewRoman,Times New Roman,Times,Baskerville,Georgia,serif; 
+}
+.playerSearch {
+  height: 10px;
+  width: auto;
+  background-color: rgb(202, 202, 202);
+}
+.grey{
+background-color: rgb(15, 15, 15)!important;	
+}
+.right{
+  text-align: right;
 }
 
 </style>

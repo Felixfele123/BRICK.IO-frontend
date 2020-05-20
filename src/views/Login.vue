@@ -69,8 +69,6 @@ import Mainmenu from '@/components/Mainmenu.vue'
       ...mapMutations(["setRefreshData"]),
       ...mapActions(["loginUser", "confLogin", "fetchUserdata"]),
       async login(){
-        
-
             await this.loginUser(this.email);
 
             let myCookie = this.getCookie("createUser");
